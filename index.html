@@ -13,7 +13,7 @@
 <link rel="icon" href="icon-192.png">
 <title>撲克練習</title>
 <style>
-:root{--felt:#1E4A38;--felt-d:#153729;--felt-l:#285B46;--line:#3E7059;--ivory:#F7F2E6;--ink:#1C1C1A;--red:#BE2F2A;--brass:#D6B35E;--mute:#A8C4B6;--ok:#8FD19E;--bad:#F09A8E}
+:root{--loss:#E07A6E;--felt:#1E4A38;--felt-d:#153729;--felt-l:#285B46;--line:#3E7059;--ivory:#F7F2E6;--ink:#1C1C1A;--red:#BE2F2A;--brass:#D6B35E;--mute:#A8C4B6;--ok:#8FD19E;--bad:#F09A8E}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0}
 body{background:var(--felt);color:var(--ivory);font-family:-apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;font-size:16px;line-height:1.6;padding-top:env(safe-area-inset-top)}
@@ -138,7 +138,32 @@ input[type=range]{width:100%;accent-color:var(--brass);margin:12px 0 4px}
 .coach .ch{font-size:12px;color:var(--mute);margin:10px 0 0;letter-spacing:.06em}
 .coach .nx{font-size:14px}
 .dir{display:inline-block;font-size:13px;border:1px solid;border-radius:6px;padding:0 8px;margin:6px 0 4px}
-.dir.agg{color:var(--brass)}.dir.mid{color:var(--ok)}.dir.con{color:var(--mute)}
+.dir.agg{color:var(--brass)}
+.muted a{color:var(--brass)}
+.cap{font-size:13px;color:var(--mute);margin:0 0 6px;line-height:1.5}.cap b{color:var(--ivory);font-weight:600}
+.kpi{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:14px}
+.kp{background:var(--felt-d);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.kl{font-size:13px;color:var(--mute)}.kv{font-family:Georgia,serif;font-size:28px;line-height:1.2;color:var(--brass)}.ks{font-size:12px;color:var(--mute)}
+.hb,.dv{display:grid;grid-template-columns:4.6em minmax(0,1fr) 5.2em;align-items:center;gap:10px;padding:5px 0;font-size:14px}
+.hl{line-height:1.25}.hl.w{font-size:13px}.hb:has(.hl.w){grid-template-columns:7.2em minmax(0,1fr) 3.6em}
+.hl small,.hv small{display:block;font-size:11px;color:var(--mute)}
+.hv{text-align:right;font-family:Georgia,serif;line-height:1.2}.hv small{font-family:inherit}
+.tr{height:10px;border-radius:0 4px 4px 0;background:var(--felt-l)}
+.tr i{display:block;height:100%;background:var(--brass);border-radius:0 4px 4px 0}
+.dz{position:relative;height:10px}.dz:before{content:"";position:absolute;left:50%;top:-4px;bottom:-4px;border-left:1px solid var(--mute)}
+.dz i{position:absolute;top:0;height:100%}.dz i.pos{left:50%;background:var(--brass);border-radius:0 4px 4px 0}.dz i.neg{right:50%;background:var(--loss);border-radius:4px 0 0 4px}
+.sty{padding:10px 0;border-bottom:1px solid var(--line)}.sty .row{font-size:14px;align-items:baseline}
+.sv{font-family:Georgia,serif;font-size:20px;color:var(--brass)}
+.mt{position:relative;height:10px;border-radius:5px;background:var(--felt-l);margin:6px 0}
+.mt .band{position:absolute;top:0;bottom:0;background:var(--line)}
+.mt i{position:absolute;top:-3px;width:12px;height:16px;margin-left:-6px;border-radius:4px;background:var(--brass);box-shadow:0 0 0 2px var(--felt)}
+.tc{position:relative}.tc svg{display:block;touch-action:pan-y;overflow:visible}
+.tc .gl{stroke:var(--line);stroke-width:1}.tc .zl{stroke:var(--mute);stroke-width:1}
+.tc .ax{fill:var(--mute);font-size:11px}
+.tc .ln{fill:none;stroke:var(--brass);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.tc .dt{fill:var(--brass);stroke:var(--felt);stroke-width:2}.tc .cx{stroke:var(--mute);stroke-width:1}
+.tip{display:none;position:absolute;top:2px;transform:translateX(-50%);box-shadow:0 2px 8px rgba(0,0,0,.3);background:var(--ivory);color:var(--ink);font-size:12px;line-height:1.45;padding:5px 8px;border-radius:6px;white-space:nowrap;pointer-events:none}
+.dir.mid{color:var(--ok)}.dir.con{color:var(--mute)}
 .res{font-family:Georgia,serif;font-size:34px;line-height:1.1;margin:6px 0 2px}
 .rv{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
 .rv .n{width:70px}.rv .h{flex:1;color:var(--mute)}
@@ -158,6 +183,7 @@ input[type=range]{width:100%;accent-color:var(--brass);margin:12px 0 4px}
 <button data-t="rec" onclick="go('rec')"><span class="ic">♣</span>紀錄</button>
 </nav>
 <script src="play.js"></script>
+<script src="stats.js"></script>
 <script>
 const RK='23456789TJQKA',SU='♠♥♦♣';
 const rd=r=>r===8?'10':RK[r];
@@ -210,7 +236,7 @@ function deal(k,ex=[]){
 }
 
 const KEY='pokerTrainer.v1';
-const blank=()=>({name:{c:0,t:0},vs:{c:0,t:0},pre:{c:0,t:0},eqN:0,wrong:{},play:{hands:0,won:0,net:0,dec:{c:0,t:0}},game:{stacks:[200,200,200,200,200,200],btn:-1,hint:'tap'}});
+const blank=()=>({name:{c:0,t:0},vs:{c:0,t:0},pre:{c:0,t:0},eqN:0,wrong:{},play:{hands:0,won:0,net:0,dec:{c:0,t:0}},game:{stacks:[200,200,200,200,200,200],btn:-1,hint:'tap'},hist:[]});
 let ST;try{ST=JSON.parse(localStorage.getItem(KEY))}catch(e){}
 ST=Object.assign(blank(),ST||{});
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(ST))}catch(e){}};
@@ -444,20 +470,22 @@ function exp(){
   document.body.appendChild(a);a.click();a.remove();
 }
 function clr(){if(confirm('確定要清除所有練習紀錄？')){ST=blank();save();render()}}
+let REC='pr';
 function rRec(){
   const sa=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone;
-  const w=Object.entries(ST.wrong).sort((a,b)=>b[1]-a[1]).slice(0,10);
-  const row=(n,o)=>`<div class="stat"><span>${n}</span><span><span class="v">${pct(o)}</span> <span class="muted">${o.c}/${o.t}</span></span></div>`;
   let h=`<h1>紀錄</h1><p class="sub">練習成績只存在這支手機裡</p>
-  ${row('認牌型',ST.name)}${row('比大小',ST.vs)}${row('起手牌',ST.pre)}
-  <div class="stat"><span>勝率計算</span><span class="muted">已算 ${ST.eqN} 次</span></div>
-  <div class="lbl" style="margin-top:20px">模擬牌局</div>
-  <div class="stat"><span>已打手數</span><span><span class="v">${ST.play.hands}</span> <span class="muted">贏 ${ST.play.won} 手</span></span></div>
-  <div class="stat"><span>累計輸贏</span><span class="v">${ST.play.net>0?'+':''}${ST.play.net}</span></div>
-  ${row('決定符合教練建議',ST.play.dec)}
-  <div class="lbl" style="margin-top:20px">起手牌最常答錯</div>
-  ${w.length?w.map(([l,n])=>`<div class="stat"><span>${dl(l)}　<span class="muted">${TN[tierOf(l)]}</span></span><span class="muted">錯 ${n} 次</span></div>`).join(''):'<p class="muted">還沒有答錯的紀錄。</p>'}
-  <div class="grid2" style="margin-top:20px"><button onclick="exp()">匯出紀錄</button><button onclick="clr()">清除紀錄</button></div>`;
+  <div class="seg"><button class="${REC==='pr'?'on':''}" onclick="REC='pr';render()">練習成績</button><button class="${REC==='an'?'on':''}" onclick="REC='an';render()">牌局分析</button></div>`;
+  if(REC==='an')h+=statsH();
+  else{
+    const w=Object.entries(ST.wrong).sort((a,b)=>b[1]-a[1]).slice(0,10);
+    const row=(n,o)=>`<div class="stat"><span>${n}</span><span><span class="v">${pct(o)}</span> <span class="muted">${o.c}/${o.t}</span></span></div>`;
+    h+=`${row('認牌型',ST.name)}${row('比大小',ST.vs)}${row('起手牌',ST.pre)}
+    <div class="stat"><span>勝率計算</span><span class="muted">已算 ${ST.eqN} 次</span></div>
+    <div class="stat"><span>模擬牌局</span><span class="muted">已打 ${ST.play.hands} 手　<a href="#" onclick="REC='an';render();return false">看分析</a></span></div>
+    <div class="lbl" style="margin-top:20px">起手牌最常答錯</div>
+    ${w.length?w.map(([l,n])=>`<div class="stat"><span>${dl(l)}　<span class="muted">${TN[tierOf(l)]}</span></span><span class="muted">錯 ${n} 次</span></div>`).join(''):'<p class="muted">還沒有答錯的紀錄。</p>'}`;
+  }
+  h+=`<div class="grid2" style="margin-top:20px"><button onclick="exp()">匯出紀錄</button><button onclick="clr()">清除紀錄</button></div>`;
   if(!sa)h+=`<div class="fb">加到主畫面：iPhone 用 Safari 點「分享」→「加入主畫面」；Android 用 Chrome 點右上選單 →「加到主畫面」。</div>`;
   M.innerHTML=h;
 }

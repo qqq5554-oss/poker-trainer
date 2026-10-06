@@ -4,6 +4,7 @@
   - 籌碼守恆：每一刻「所有人籌碼 + 已下注」等於這手開始時的總籌碼
   - 沒有負籌碼、每手都能正常結束（不會卡住）
   - 教練建議每個欄位都有內容，沒有 undefined、NaN 之類的錯字
+  - 每手都有記到牌局紀錄，「紀錄 → 牌局分析」能正常顯示
   - 頁面沒有 JavaScript 錯誤
 
 用法：python tests/simulate.py [手數，預設 300]
@@ -80,6 +81,22 @@ async (hands) => {
     if (G.pots.some(x => x.w.length > 1)) splits++;
     played++;
   }
+  // 牌局分析：每手都有紀錄，分析頁顯示正常
+  if (!errs.length) {
+    const want = Math.min(played, 500), last = ST.hist[ST.hist.length - 1];
+    if (ST.hist.length !== want) errs.push(`牌局紀錄 ${ST.hist.length} 筆 ≠ 應有 ${want} 筆`);
+    if (last && last.no !== ST.play.hands) errs.push(`最後一筆紀錄是第 ${last.no} 手，應該是第 ${ST.play.hands} 手`);
+    const decs = ST.hist.reduce((a, x) => a + x.d.length, 0);
+    if (played <= 500 && decs !== ST.play.dec.t) errs.push(`紀錄裡的決定 ${decs} 次 ≠ 統計 ${ST.play.dec.t} 次`);
+    go('rec'); REC = 'an';
+    for (const r of ['all', '50']) {
+      SR = r; render();
+      const html = M.innerHTML;
+      if (/undefined|NaN|null|Infinity/.test(html)) errs.push(`牌局分析（${r}）出現錯字：${html.match(/.{40}(undefined|NaN|null|Infinity).{40}/)}`);
+      if (!html.includes('籌碼走勢') || !html.includes('打法風格')) errs.push(`牌局分析（${r}）缺少圖表`);
+    }
+    go('play');
+  }
   return {coachSeen, played, rebuys, showdowns, splits, sidePots, errs, stacks: ST.game.stacks, stats: ST.play};
 }
 """
@@ -122,7 +139,7 @@ def main():
         for e in errs:
             print("  -", e)
         sys.exit(1)
-    print("通過：籌碼守恆、每手都正常結束、教練建議完整、沒有 JS 錯誤")
+    print("通過：籌碼守恆、每手都正常結束、教練建議完整、牌局分析正常、沒有 JS 錯誤")
 
 
 if __name__ == "__main__":

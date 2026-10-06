@@ -166,6 +166,12 @@ function finish(pots){
   const me=G.P[0];G.net=me.stack-me.start;
   ST.play.hands++;ST.play.net+=G.net;if(pots.some(x=>x.w.includes(0)))ST.play.won++;
   G.dec.forEach(d=>{ST.play.dec.t++;if(d.ok)ST.play.dec.c++});
+  const won=pots.some(x=>x.w.includes(0)),pre=G.dec.filter(d=>d.si===0),sd=G.street===4&&!me.folded;
+  ST.hist.push({no:G.no,pos:posOf(0),net:G.net,won,sd,wsd:sd&&won,
+    sf:G.board.length>=3&&!(me.folded&&me.foldSt===0),
+    vp:pre.some(d=>d.u==='a'||d.u==='p'&&d.fc),pr:pre.some(d=>d.u==='a'),
+    d:G.dec.map(d=>[d.si,d.u,d.c,d.k,d.ok?1:0])});
+  if(ST.hist.length>500)ST.hist.splice(0,ST.hist.length-500);
   save();render();
 }
 
@@ -342,7 +348,7 @@ function uAct(type){
   const cat=type==='fold'?'f':type==='raise'?'a':'p';
   const act=type==='fold'?'蓋牌':type==='check'||call===0&&type==='call'?'過牌':type==='call'?`跟注 ${Math.min(call,p.stack)}`:(G.curBet?`加注到 ${G.raiseTo}`:`下注 ${G.raiseTo}`);
   const ok=h.ok.includes(cat);
-  const d={st:STN[G.street],act,ok,rec:h.title,why:h.why,dir:h.dir.t};
+  const d={st:STN[G.street],act,ok,rec:h.title,why:h.why,dir:h.dir.t,si:G.street,u:cat,c:h.cat,k:h.dir.k,fc:call>0};
   if(type==='fold'&&call===0){d.ok=false;d.why='沒人下注時過牌是免費的，不需要蓋牌。'}
   G.dec.push(d);G.lastFb=d;
   if(type==='fold')G.fast=true;
