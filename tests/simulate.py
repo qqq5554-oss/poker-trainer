@@ -3,6 +3,7 @@
 檢查項目：
   - 籌碼守恆：每一刻「所有人籌碼 + 已下注」等於這手開始時的總籌碼
   - 沒有負籌碼、每手都能正常結束（不會卡住）
+  - 教練建議每個欄位都有內容，沒有 undefined、NaN 之類的錯字
   - 頁面沒有 JavaScript 錯誤
 
 用法：python tests/simulate.py [手數，預設 300]
@@ -33,7 +34,7 @@ async (hands) => {
   const sum = a => a.reduce((x, y) => x + y, 0);
   ST.game.stacks = [200, 200, 200, 200, 200, 200]; ST.game.btn = -1; save();
   go('play');
-  let played = 0, rebuys = 0, showdowns = 0, splits = 0, sidePots = 0, idle = 0;
+  let coachSeen = 0, played = 0, rebuys = 0, showdowns = 0, splits = 0, sidePots = 0, idle = 0;
   while (played < hands) {
     if (ST.game.stacks[0] < BBV) { gRebuy(); rebuys++; }
     gStart();
@@ -45,6 +46,11 @@ async (hands) => {
       if (now !== startTotal) { errs.push(`第 ${G.no} 手籌碼不守恆：${now} ≠ ${startTotal}`); break; }
       if (G.P.some(p => p.stack < 0)) { errs.push(`第 ${G.no} 手出現負籌碼`); break; }
       if (G.cur === 0) {
+        const h = G.hint, txt = [h.title, h.why, h.next, h.dir && h.dir.t, ...(h.sit || []), ...h.info].join('|');
+        if (!h.title || !h.why || !h.next || !h.dir || !h.sit || !h.sit.length || /undefined|NaN|null|Infinity/.test(txt)) {
+          errs.push(`第 ${G.no} 手教練建議不完整：${txt}`); break;
+        }
+        coachSeen++;
         const p = G.P[0], call = G.curBet - p.bet, r = Math.random();
         if (r < 0.25) uAct('fold');
         else if (r < 0.7 || p.stack <= call) uAct(call > 0 ? 'call' : 'check');
@@ -74,7 +80,7 @@ async (hands) => {
     if (G.pots.some(x => x.w.length > 1)) splits++;
     played++;
   }
-  return {played, rebuys, showdowns, splits, sidePots, errs, stacks: ST.game.stacks, stats: ST.play};
+  return {coachSeen, played, rebuys, showdowns, splits, sidePots, errs, stacks: ST.game.stacks, stats: ST.play};
 }
 """
 
@@ -108,7 +114,7 @@ def main():
     srv.shutdown()
 
     print(f"打了 {res['played']} 手：攤牌 {res['showdowns']}、有邊池 {res['sidePots']}、"
-          f"平分 {res['splits']}、你重新買入 {res['rebuys']} 次")
+          f"平分 {res['splits']}、你重新買入 {res['rebuys']} 次、檢查教練建議 {res['coachSeen']} 次")
     print(f"最後籌碼：{res['stacks']}")
     errs = res["errs"] + [f"JS 錯誤：{e}" for e in page_errs]
     if errs:
@@ -116,7 +122,7 @@ def main():
         for e in errs:
             print("  -", e)
         sys.exit(1)
-    print("通過：籌碼守恆、每手都正常結束、沒有 JS 錯誤")
+    print("通過：籌碼守恆、每手都正常結束、教練建議完整、沒有 JS 錯誤")
 
 
 if __name__ == "__main__":
