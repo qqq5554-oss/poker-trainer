@@ -57,14 +57,11 @@
 
 ## 未完成的部分
 
-### 1. 新版還沒上線（最優先）
-目前網站是**舊版**（舊圖示、沒有牌局分頁）。這個資料夾就是新版，原本用 Vercel MCP 上傳時卡住，所以改用 GitHub 部署：
+### 1. 新版上線
+已改用 GitHub 部署：Vercel 專案已連接 `qqq5554-oss/poker-trainer`，推到 `main` 就會自動部署到正式網址。
 
-1. 把這些檔案推到 GitHub 的 `qqq5554-oss/poker-trainer`。
-2. 確認 Vercel 的 GitHub App 有這個 repo 的讀取權限（github.com/settings/installations → Vercel → Repository access）。
-3. 在 Vercel 後台 poker-trainer 專案 → Settings → Git → Connect Git Repository，選這個 repo。**接到現有專案才能保留原網址**；另開新專案會換網址。
-4. 部署完開正式網址確認：圖示是手繪黑桃、底部有「牌局」分頁。
-5. 提醒使用者：iPhone 主畫面要刪掉舊捷徑，用 Safari 重新「加入主畫面」，才會出現新圖示。
+- 上線後開正式網址確認：圖示是手繪黑桃、底部有「牌局」分頁。
+- 提醒使用者：iPhone 主畫面要刪掉舊捷徑，用 Safari 重新「加入主畫面」，才會出現新圖示。
 
 ### 2. 牌局引擎已知的簡化
 這些都不影響正常遊玩，是刻意的簡化，之後可以改進：
@@ -85,3 +82,4 @@
 
 - 部署保護：專案設定是 `all_except_custom_domains`，正式網址可以直接打開。如果手機打開時要求登入 Vercel，到 Settings → Deployment Protection 關掉 Vercel Authentication。
 - Vercel MCP 的 `upload_file` 上傳超過約 5KB 的檔案常常沒有回應，所以改用 Git 部署，不要再走 MCP 上傳。
+- 連接 repo 時要從 Vercel 後台 Settings → Git → Connect Git Repository 開始，它會帶去安裝 Vercel 的 GitHub App（github.com/apps/vercel）。
