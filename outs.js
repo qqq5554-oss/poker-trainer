@@ -10,11 +10,15 @@ function outsInfo(h,b){
   const kn=[...h,...b];if(catOf(ev(kn))>=2)return null;
   const sc=[0,0,0,0];let rm=0;kn.forEach(c=>{sc[c&3]++;rm|=1<<(c>>2)});
   if(sh(rm)>=0)return null;
-  const fl=[],st=[];
+  let bm=0;b.forEach(c=>bm|=1<<(c>>2));
+  const fl=[],st=[],bo=new Set(),five=b.length+1>=5;
   for(let c=0;c<52;c++){
     if(kn.includes(c))continue;
-    const f=sc[c&3]>=4,s=sh(rm|1<<(c>>2))>=0;if(!f&&!s)continue;
-    const nb=[...b,c];if(nb.length>=5&&catOf(ev(nb))>=4)continue;
+    const r=c>>2,uh=sh(rm|1<<r),bh=five?sh(bm|1<<r):-1;
+    // 公共牌自己就成順子：只有你的順子比公共牌的大才算；你成同花另外算
+    if(bh>=0&&uh<=bh&&!(bm>>r&1))bo.add(r);
+    const f=sc[c&3]>=4,s=uh>=0&&uh>bh;if(!f&&!s)continue;
+    const nb=[...b,c];if(nb.length>=5&&ev(nb)>=ev([...kn,c]))continue;
     if(f)fl.push(c);if(s)st.push(c);
   }
   const ranks=[...new Set(st.map(c=>c>>2))].sort((a,b)=>a-b);
@@ -22,7 +26,13 @@ function outsInfo(h,b){
   const kind=fl.length&&ranks.length?'combo':fl.length?'flush':ranks.length===2?'oe':ranks.length===1?'gut':null;
   if(!kind)return null;
   const fs=fl.length?fl[0]&3:-1,ov=fl.filter(c=>st.includes(c));
-  return {kind,fl,st,ov,ranks,fs,seen:fs<0?0:sc[fs],hs:fs<0?0:h.filter(c=>(c&3)===fs).length,outs:[...new Set([...fl,...st])].length};
+  return {kind,fl,st,ov,ranks,fs,bo:[...bo].sort((a,b)=>a-b),seen:fs<0?0:sc[fs],hs:fs<0?0:h.filter(c=>(c&3)===fs).length,outs:[...new Set([...fl,...st])].length};
+}
+function boNote(q,short){
+  if(!q.bo||!q.bo.length)return '';
+  const rs=q.bo.map(rd).join('、'),keep=q.fl.filter(c=>q.bo.includes(c>>2));
+  if(short)return `（${rs} 會讓公共牌自己成順子，大家都有，不算順子的 outs${keep.length?`；${keep.map(cn).join('、')} 讓你成同花，還是算`:''}）`;
+  return `<p class="cap">注意：再來一張 ${rs}，公共牌自己就湊成順子，桌上每個人都有，所以這種牌不算順子的 outs。${keep.length?`不過 ${keep.map(cn).join('、')} 同時讓你成同花，同花比順子大，所以還是算在同花的 outs 裡。`:''}</p>`;
 }
 function outsOpts(q){
   const n=q.outs,oc=new Set([n]);
@@ -76,6 +86,7 @@ function oExplain(i,q=OQ){
     if(q.fl.length)h+=`<p><b>同花的 outs</b>：${SU[q.fs]} 一共有 13 張，你已經看到 ${q.seen} 張（手牌加公共牌），剩下 13 − ${q.seen} = <b>${q.fl.length}</b> 張。</p>${mini(q.fl)}`;
     if(q.st.length)h+=`<p><b>順子的 outs</b>：${q.ranks.length>1?rs.join(' 或 ')+' 都能成順':rs[0]+' 能成順'}。每種點數有 4 張（♠♥♦♣ 四種花色），${q.ranks.length} × 4 = <b>${q.st.length}</b> 張。</p>${mini(q.st)}`;
     if(q.ov.length)h+=`<p><b>重複的要扣掉</b>：${q.ov.map(cn).join('、')} 同時是同花和順子的 outs，只能算一次：${q.fl.length} + ${q.st.length} − ${q.ov.length} = <b>${q.n}</b> 張。</p>`;
+    h+=boNote(q);
     h+=`<p>所以你的 outs 一共 <b>${q.n}</b> 張。${q.fl.length&&q.ans&&q.ans[1]!=null&&q.opts[1][q.ans[1]]===13?'常見錯誤是直接算 13 張，忘了扣掉已經看得到的同花色牌。':''}</p>`;
     return h;
   }
@@ -142,7 +153,7 @@ function qzBuild(){
     if(q.fl.length&&!q.st.length)parts.push(`${SU[q.fs]} 一共 13 張 − 看到的 ${q.seen} 張 ＝ ${q.fl.length} 張`);
     else if(q.st.length&&!q.fl.length)parts.push(`${q.ranks.map(rd).join('、')} ${q.ranks.length}種點數 × 4 張 ＝ ${q.st.length} 張`);
     else parts.push(`同花 ${q.fl.length} 張 ＋ 順子 ${q.st.length} 張${q.ov.length?` − 重複 ${q.ov.length} 張`:''} ＝ ${q.n} 張`);
-    Q.push({t:`有幾張 outs？（${OKN[q.kind]}）`,o:o.map(x=>x+' 張'),r:o.indexOf(q.n),ex:parts[0]});
+    Q.push({t:`有幾張 outs？（${OKN[q.kind]}）`,o:o.map(x=>x+' 張'),r:o.indexOf(q.n),ex:parts[0]+boNote(q,1)});
     const po=[...new Set([q.n,q.n*2,q.n*4].map(x=>Math.min(x,100)))].sort((a,b)=>a-b);
     const why=q.turn?'轉牌只剩一張，×2':q.mult===4?'有人全下，一定看得到兩張，×4':call>0?'翻牌但對手沒全下，保守只算下一張，×2':'先算下一張，×2';
     Q.push({t:'中牌的機率大約多少？',o:po.map(x=>x+'%'),r:po.indexOf(q.est),ex:`${q.n} × ${q.mult} ＝ ${q.est}%（${why}）`});

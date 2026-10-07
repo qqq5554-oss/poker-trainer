@@ -117,6 +117,19 @@ async (hands) => {
   const kinds = {};
   if (!errs.length) {
     go('eq'); EQM = 'outs';
+    // 固定題：使用者回報的牌。手牌 7♥ 8♥，公共牌 10♠ A♠ Q♥ K♥。
+    // 任何 J 都讓公共牌自己成順子（不算），但 J♥ 讓你成同花（要算），所以是 13 − 4 = 9 張
+    const fx = [
+      {h: [21, 25], b: [32, 48, 41, 45], n: 9, kind: 'flush'},
+      // 公共牌 5 6 8 9，手上有 10：7 讓公共牌成 5–9 順子，但你有更大的 6–10 順子，要算
+      {h: [33, 3], b: [12, 18, 27, 29], n: 4, kind: 'gut'}
+    ];
+    for (const f of fx) {
+      const o = outsInfo(f.h, f.b);
+      if (!o || o.outs !== f.n || o.kind !== f.kind) errs.push(`固定題 ${f.h}|${f.b}：應該是 ${f.kind} ${f.n} 張，算出 ${o && o.kind} ${o && o.outs} 張`);
+      const d = drawInfo(f.h, f.b);
+      if (!d || d.o !== f.n) errs.push(`固定題 ${f.h}|${f.b}：drawInfo 算出 ${d && d.o} 張，應該是 ${f.n}`);
+    }
     for (let k = 0; k < 1000 && !errs.length; k++) {
       newOQ(); const q = OQ, kn = [...q.h, ...q.b];
       kinds[q.kind] = (kinds[q.kind] || 0) + 1;
@@ -124,9 +137,10 @@ async (hands) => {
       for (let c = 0; c < 52; c++) {
         if (kn.includes(c)) continue;
         const v = catOf(ev([...kn, c])), nb = [...q.b, c];
-        if ((v === 4 || v === 5 || v === 8) && !(nb.length >= 5 && catOf(ev(nb)) >= 4)) n++;
+        if ((v === 4 || v === 5 || v === 8) && !(nb.length >= 5 && ev(nb) >= ev([...kn, c]))) n++;
       }
       if (n !== q.n) { errs.push(`Outs 題目 outs 數 ${q.n} ≠ 逐張檢查 ${n}：${kn}`); break; }
+      if (q.fl.length && q.fl.length !== 13 - q.seen) errs.push(`同花 outs ${q.fl.length} 張和「13 − ${q.seen}」對不上：${kn}`);
       if (catOf(ev(kn)) >= 2) errs.push(`Outs 題目已經是${handName(ev(kn))}，不該出題`);
       const need = Math.round(q.B / (q.P + 2 * q.B) * 100);
       if (need !== q.need) errs.push(`Outs 題目需要勝率 ${q.need} ≠ ${need}`);

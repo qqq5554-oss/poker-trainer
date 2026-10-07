@@ -45,7 +45,7 @@ function drawInfo(hole,board){
   for(let c=0;c<52;c++){
     if(kn.includes(c))continue;
     const v=catOf(ev([...kn,c]));if(v<4||v===6||v===7)continue;
-    const b=[...board,c];if(b.length>=5&&catOf(ev(b))>=4)continue;
+    const b=[...board,c];if(b.length>=5&&ev(b)>=ev([...kn,c]))continue;
     if(v===5||v===8)fl++;else sr++;
   }
   const o=fl+sr;if(!o)return null;
