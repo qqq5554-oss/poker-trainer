@@ -4,6 +4,7 @@
   - 籌碼守恆：每一刻「所有人籌碼 + 已下注」等於這手開始時的總籌碼
   - 沒有負籌碼、每手都能正常結束（不會卡住）
   - 教練建議每個欄位都有內容，沒有 undefined、NaN 之類的錯字
+  - 牌局中的速算練習每題都有正確答案，作答完會出現結論
   - 每手都有記到牌局紀錄，「紀錄 → 牌局分析」能正常顯示
   - Outs 練習出 1000 題：outs 數和逐張檢查一致、每步選項有正確答案、說明沒有錯字
   - 頁面沒有 JavaScript 錯誤
@@ -36,7 +37,7 @@ async (hands) => {
   const sum = a => a.reduce((x, y) => x + y, 0);
   ST.game.stacks = [200, 200, 200, 200, 200, 200]; ST.game.btn = -1; save();
   go('play');
-  let osSeen = 0, coachSeen = 0, played = 0, rebuys = 0, showdowns = 0, splits = 0, sidePots = 0, idle = 0;
+  let qzSeen = 0, osSeen = 0, coachSeen = 0, played = 0, rebuys = 0, showdowns = 0, splits = 0, sidePots = 0, idle = 0;
   while (played < hands) {
     if (ST.game.stacks[0] < BBV) { gRebuy(); rebuys++; }
     gStart();
@@ -48,7 +49,16 @@ async (hands) => {
       if (now !== startTotal) { errs.push(`第 ${G.no} 手籌碼不守恆：${now} ≠ ${startTotal}`); break; }
       if (G.P.some(p => p.stack < 0)) { errs.push(`第 ${G.no} 手出現負籌碼`); break; }
       if (G.cur === 0) {
-        const h = G.hint, txt = [h.title, h.why, h.next, h.dir && h.dir.t, ...(h.sit || []), ...h.info, outsGame(h)].join('|');
+        // 速算練習：每題都有正確答案，全部作答後出現結論
+        let cp = calcPanel();
+        if (G.qz.Q) {
+          if (G.qz.Q.some(x => x.r < 0)) { errs.push(`第 ${G.no} 手速算練習選項裡沒有正確答案：${JSON.stringify(G.qz.Q)}`); break; }
+          G.qz.Q.forEach((x, i) => qzAns(i, Math.random() < .5 ? x.r : 0));
+          cp += calcPanel();
+          if (G.qz.Q.length && !cp.includes('class="qr"')) { errs.push(`第 ${G.no} 手速算練習作答完沒有結論`); break; }
+          qzSeen++;
+        }
+        const h = G.hint, txt = [h.title, h.why, h.next, h.dir && h.dir.t, ...(h.sit || []), ...h.info, outsGame(h), cp].join('|');
         if (h.os) {
           const dr = drawInfo(G.P[0].hole, G.board);
           if (!dr || dr.o !== h.os.n) { errs.push(`第 ${G.no} 手教練的 outs ${h.os.n} 和 drawInfo ${dr && dr.o} 不一致`); break; }
@@ -131,7 +141,7 @@ async (hands) => {
     }
     go('play');
   }
-  return {osSeen, kinds, coachSeen, played, rebuys, showdowns, splits, sidePots, errs, stacks: ST.game.stacks, stats: ST.play};
+  return {qzSeen, osSeen, kinds, coachSeen, played, rebuys, showdowns, splits, sidePots, errs, stacks: ST.game.stacks, stats: ST.play};
 }
 """
 
@@ -166,7 +176,7 @@ def main():
 
     print(f"打了 {res['played']} 手：攤牌 {res['showdowns']}、有邊池 {res['sidePots']}、"
           f"平分 {res['splits']}、你重新買入 {res['rebuys']} 次、檢查教練建議 {res['coachSeen']} 次")
-    print(f"牌局中遇到聽牌、檢查 Outs 計算 {res['osSeen']} 次")
+    print(f"牌局中遇到聽牌、檢查 Outs 計算 {res['osSeen']} 次；速算練習出現 {res['qzSeen']} 次")
     print(f"Outs 練習出了 {sum(res['kinds'].values())} 題：{res['kinds']}")
     print(f"最後籌碼：{res['stacks']}")
     errs = res["errs"] + [f"JS 錯誤：{e}" for e in page_errs]

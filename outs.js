@@ -24,6 +24,19 @@ function outsInfo(h,b){
   const fs=fl.length?fl[0]&3:-1,ov=fl.filter(c=>st.includes(c));
   return {kind,fl,st,ov,ranks,fs,seen:fs<0?0:sc[fs],hs:fs<0?0:h.filter(c=>(c&3)===fs).length,outs:[...new Set([...fl,...st])].length};
 }
+function outsOpts(q){
+  const n=q.outs,oc=new Set([n]);
+  if(q.fl.length)oc.add(13);
+  if(q.kind==='combo'){oc.add(q.fl.length+q.st.length);oc.add(q.fl.length)}
+  if(q.kind==='oe')oc.add(4);if(q.kind==='gut')oc.add(8);
+  for(const x of [8,9,4,12,15,6,2])if(oc.size<4)oc.add(x);
+  return [...oc].sort((a,b)=>a-b);
+}
+function needOpts(need,call,pot){
+  const pc=new Set([need,Math.min(95,Math.round(call/pot*100))]);
+  for(const x of [need+10,need-10,need+20])if(pc.size<4&&x>0&&x<100)pc.add(x);
+  return [...pc].sort((a,b)=>a-b);
+}
 function newOQ(){
   const want=OKIND[rnd(4)],turn=Math.random()<.4,nb=turn?4:3;let q=null;
   for(let k=0;k<30000&&!q;k++){
@@ -40,16 +53,10 @@ function newOQ(){
     if(Math.abs(est-need)>=4)break;
   }
   // 第 2 步的選項：正確答案加上常見錯誤
-  const oc=new Set([n]);
-  if(q.fl.length)oc.add(13);
-  if(q.kind==='combo'){oc.add(q.fl.length+q.st.length);oc.add(q.fl.length)}
-  if(q.kind==='oe')oc.add(4);if(q.kind==='gut')oc.add(8);
-  for(const x of [8,9,4,12,15,6,2])if(oc.size<4)oc.add(x);
+  const oc=outsOpts(q);
   // 第 4 步的選項
-  const pc=new Set([need,Math.min(95,Math.round(B/P*100)),Math.round(B/(P+B)*100)]);
-  for(const x of [need+10,need-10,need+20])if(pc.size<4&&x>0&&x<100)pc.add(x);
   OQ=Object.assign(q,{turn,allin,mult,n,est,exact,P,B,need,T:P+2*B,step:0,ans:[],
-    opts:[[OKN.flush,OKN.oe,OKN.gut,OKN.combo],[...oc].sort((a,b)=>a-b),['×2','×4'],[...pc].sort((a,b)=>a-b),['跟注','蓋牌']]});
+    opts:[[OKN.flush,OKN.oe,OKN.gut,OKN.combo],oc,['×2','×4'],needOpts(need,B,P+B),['跟注','蓋牌']]});
 }
 function oRight(i){const q=OQ;return [OKIND.indexOf(q.kind),q.opts[1].indexOf(q.n),q.mult===4?1:0,q.opts[3].indexOf(q.need),q.est>=q.need?0:1][i]}
 function oAns(k){const q=OQ;if(q.ans[q.step]!=null)return;q.ans[q.step]=k;rec('outs',k===oRight(q.step));render()}
@@ -78,7 +85,7 @@ function oExplain(i,q=OQ){
   }
   if(i===3){
     const a=q.ans[3]!=null?q.opts[3][q.ans[3]]:null;
-    return `<p>需要的勝率 ＝ 你要跟的錢 ÷ 跟完之後底池的總數。</p><p>跟完之後的底池 ＝ 原本 ${q.P} ＋ 對手 ${q.B} ＋ 你 ${q.B} ＝ ${q.T}</p><p>${q.B} ÷ ${q.T} ＝ <b>約 ${q.need}%</b></p>${a!==q.need&&a===Math.min(95,Math.round(q.B/q.P*100))?`<p class="cap">常見錯誤是算 ${q.B} ÷ ${q.P}，忘了把雙方下的錢都加進底池。</p>`:''}<p class="cap">好記的數字：對手下半個底池 → 25%；下 2/3 個底池 → 約 29%；下一整個底池 → 33%。</p>`;
+    return `<p>需要的勝率 ＝ 你要跟的錢 ÷ 跟完之後底池的總數。</p><p>跟完之後的底池 ＝ 原本 ${q.P} ＋ 對手 ${q.B} ＋ 你 ${q.B} ＝ ${q.T}</p><p>${q.B} ÷ ${q.T} ＝ <b>約 ${q.need}%</b></p>${a!==q.need&&a===Math.min(95,Math.round(q.B/(q.P+q.B)*100))?`<p class="cap">常見錯誤是算 ${q.B} ÷ ${q.P+q.B}，忘了把你自己要跟的 ${q.B} 也加進底池。</p>`:''}<p class="cap">好記的數字：對手下半個底池 → 25%；下 2/3 個底池 → 約 29%；下一整個底池 → 33%。</p>`;
   }
   const win=q.est>=q.need;
   return `<p>你中牌的機率約 <b>${q.est}%</b>，跟注需要 <b>${q.need}%</b>。</p><p>${win?`${q.est}% 比 ${q.need}% 高，長期來看跟注是賺的 → <b>跟注</b>。`:`${q.est}% 比 ${q.need}% 低，長期跟注會虧錢 → <b>蓋牌</b>。`}</p>${!win&&q.need-q.est<=8?'<p class="cap">差得不多時，如果中牌後還能從對手身上多贏很多，有些人還是會跟，這叫「隱含賠率」。新手先照數字打就好。</p>':''}`;
@@ -125,4 +132,47 @@ function outsGame(H){
     [OSTEP[3],q.call>0?`<p>需要的勝率 ＝ 你要跟的錢 ÷ 跟完之後底池的總數。</p><p>現在底池是 ${q.pot}（包含這一輪大家下的錢），你跟 ${q.call} 之後是 ${q.pot} ＋ ${q.call} ＝ ${q.pot+q.call}。</p><p>${q.call} ÷ ${q.pot+q.call} ＝ <b>約 ${q.need}%</b></p>`:'<p>現在沒有人下注，你可以免費看下一張，不用算底池賠率。</p>'],
     [OSTEP[4],s5]];
   return `<details class="os" ${G.osOpen?'open':''} ontoggle="G.osOpen=this.open"><summary>Outs 計算：${OKN[q.kind]}，${q.n} 張 outs，約 ${q.est}%${q.call>0?`，需要 ${q.need}%`:''}<span>點開看 5 個步驟</span></summary>${st.map((x,i)=>`<div class="ox"><div class="ch">第 ${i+1} 步：${x[0]}</div>${x[1]}</div>`).join('')}</details>`;
+}
+
+// 牌局中的速算練習：輪到你、翻牌後，在聽牌或面對下注時出現
+function qzBuild(){
+  const H=G.hint,q=H.os,p=G.P[0],call=Math.min(G.curBet-p.bet,p.stack),pot=potT(),Q=[];
+  if(q){
+    const o=outsOpts(q),parts=[];
+    if(q.fl.length&&!q.st.length)parts.push(`${SU[q.fs]} 一共 13 張 − 看到的 ${q.seen} 張 ＝ ${q.fl.length} 張`);
+    else if(q.st.length&&!q.fl.length)parts.push(`${q.ranks.map(rd).join('、')} ${q.ranks.length}種點數 × 4 張 ＝ ${q.st.length} 張`);
+    else parts.push(`同花 ${q.fl.length} 張 ＋ 順子 ${q.st.length} 張${q.ov.length?` − 重複 ${q.ov.length} 張`:''} ＝ ${q.n} 張`);
+    Q.push({t:`有幾張 outs？（${OKN[q.kind]}）`,o:o.map(x=>x+' 張'),r:o.indexOf(q.n),ex:parts[0]});
+    const po=[...new Set([q.n,q.n*2,q.n*4].map(x=>Math.min(x,100)))].sort((a,b)=>a-b);
+    const why=q.turn?'轉牌只剩一張，×2':q.mult===4?'有人全下，一定看得到兩張，×4':call>0?'翻牌但對手沒全下，保守只算下一張，×2':'先算下一張，×2';
+    Q.push({t:'中牌的機率大約多少？',o:po.map(x=>x+'%'),r:po.indexOf(q.est),ex:`${q.n} × ${q.mult} ＝ ${q.est}%（${why}）`});
+  }
+  if(call>0){
+    const need=Math.round(call/(pot+call)*100),o=needOpts(need,call,pot);
+    Q.push({t:`跟注 ${call}，至少要多少勝率才划算？`,o:o.map(x=>x+'%'),r:o.indexOf(need),ex:`${call} ÷（底池 ${pot} ＋ 跟注 ${call}）＝ ${need}%`,need});
+  }
+  return {Q,call,pot};
+}
+function qzAns(i,k){const Z=G.qz;if(!Z||Z.a[i]!=null||Z.show)return;Z.a[i]=k;rec('outs',k===Z.Q[i].r);render()}
+function calcPanel(){
+  const H=G.hint;if(G.street===0||ST.game.calc===false||!H)return '';
+  const Z=G.qz;if(!Z.Q)Object.assign(Z,qzBuild());
+  if(!Z.Q.length)return '';
+  const q=H.os,all=Z.show||Z.a.length===Z.Q.length&&Z.a.every(x=>x!=null);
+  let h=`<div class="qz"><div class="row"><b>速算練習</b><span class="muted">${Z.show?'答案':'先心算，再點答案'}</span></div>`;
+  Z.Q.forEach((x,i)=>{
+    if(i>0&&Z.a[i-1]==null&&!Z.show)return;
+    const a=Z.a[i],d=a!=null||Z.show;
+    h+=`<div class="qq">${i+1}. ${x.t}</div><div class="chips">${x.o.map((o,k)=>`<button class="${d?(k===x.r?'right':k===a?'wrong':''):''}" onclick="qzAns(${i},${k})">${o}</button>`).join('')}</div>${d?`<div class="qe">${a==null?'':a===x.r?'<span class="ok-t">✓</span> ':'<span class="bad-t">✗</span> '}${x.ex}</div>`:''}`;
+  });
+  if(all){
+    const nd=Z.Q.find(x=>x.need!=null),need=nd&&nd.need;
+    let r;
+    if(q&&need!=null)r=`只看聽牌：約 ${q.est}% ${q.est>=need?'＞':'＜'} 需要 ${need}% → <b>${q.est>=need?'跟注划算':'跟注不划算'}</b>${H.eq!=null?`<br><span class="muted">教練模擬整手牌的勝率約 ${H.eq}%（還算進了配成對子等其他贏法）</span>`:''}`;
+    else if(q)r=`沒人下注，可以免費看下一張，中牌機率約 ${q.est}%。`;
+    else r=`勝率要高於 <b>${need}%</b> 才划算。教練模擬的勝率約 ${H.eq}% → <b>${H.eq>=need?'夠，跟注划算':'不夠，跟注不划算'}</b>`;
+    h+=`<div class="qr">${r}</div>`;
+    if(q)h+=outsGame(H);
+  }else h+=`<button class="lnk" onclick="G.qz.show=true;render()">直接看答案</button>`;
+  return h+'</div>';
 }

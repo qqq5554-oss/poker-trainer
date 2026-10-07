@@ -91,7 +91,7 @@ function step(){
   if(live().length===1)return winFold();
   if(G.cur<0)return endStreet();
   if(G.cur===0){
-    G.hint=coach();G.raiseOpen=false;G.hintOpen=ST.game.hint==='auto';
+    G.hint=coach();G.qz={a:[]};G.raiseOpen=false;G.hintOpen=ST.game.hint==='auto';
     G.raiseTo=G.hint.to||raiseOpts().o[0][1];render();return;
   }
   render();
@@ -308,7 +308,7 @@ function coach(){
       exact:Math.round((turn?n/46:mult===4?1-(47-n)*(46-n)/(47*46):n/47)*1000)/10,need:call>0?Math.round(call/(pot+call)*100):null});
     const k=info.findIndex(x=>x.startsWith('聽牌：'));if(k>=0)info.splice(k,1);
   }
-  const R=(o)=>Object.assign({sit,info,ft,os},o);
+  const R=(o)=>Object.assign({sit,info,ft,os,eq:e},o);
   if(call===0){
     if(eq>=.6){
       let f=2/3,w2='下注約底池的 2/3，讓比你差的牌付錢，也讓聽牌的人不能免費看下一張。';
@@ -365,6 +365,7 @@ function setRT(v){G.raiseTo=+v;const e=document.getElementById('rto');if(e)e.tex
 function gReset(){if(!confirm('所有人的籌碼回到 200，重新開始？'))return;clearTimeout(G.timer);ST.game.stacks=[START,START,START,START,START,START];ST.game.btn=-1;save();G={phase:'idle',P:[],board:[],log:[],dec:[]};render()}
 function gRebuy(){ST.game.stacks[0]=START;save();render()}
 function gHint(m){ST.game.hint=m;save();render()}
+function gCalc(v){ST.game.calc=v;save();render()}
 
 const SEATXY=[null,[11,73],[11,29],[50,14],[89,29],[89,73]];
 const BETXY=[[50,89],[30,76],[30,41],[50,35],[70,41],[70,76]];
@@ -383,6 +384,8 @@ function rPlay(){
     ${BOTS.map(b=>`<div class="stat"><span>${b.name}　<span class="muted">${b.d}</span></span><span class="pos" style="font-size:13px;padding:0 8px;white-space:nowrap">${b.style}</span></div>`).join('')}
     <div class="lbl">教練建議</div>
     <div class="seg"><button class="${gs.hint==='auto'?'on':''}" onclick="gHint('auto')">直接顯示</button><button class="${gs.hint!=='auto'?'on':''}" onclick="gHint('tap')">我先想，再點開看</button></div>
+    <div class="lbl">速算練習（翻牌後輪到你時，練算 outs 和底池賠率）</div>
+    <div class="seg"><button class="${gs.calc!==false?'on':''}" onclick="gCalc(true)">顯示</button><button class="${gs.calc===false?'on':''}" onclick="gCalc(false)">不顯示</button></div>
     <div class="row" style="margin-top:16px"><span>你的籌碼</span><span class="big-n" style="font-size:30px">${gs.stacks[0]}</span></div>`;
     h+=gs.stacks[0]<BBV?`<p class="err">籌碼輸光了，重新買入就能繼續。</p><button class="pri full" onclick="gRebuy()">重新買入 200 籌碼</button>`:`<button class="pri full" style="margin-top:12px" onclick="gStart()">發牌</button>`;
     if(ST.play.hands)h+=`<button class="full" style="margin-top:8px" onclick="gReset()">籌碼歸位，重新開始</button>`;
@@ -415,9 +418,10 @@ function rPlay(){
       <button class="pri full" onclick="uAct('raise')">${G.curBet?'加注到':'下注'} <span id="rto">${G.raiseTo}</span></button></div>`;
     }
     const H=G.hint;
+    h+=calcPanel();
     if(G.hintOpen)h+=`<div class="fb coach"><b>教練建議：${H.title}</b><div><span class="dir ${H.dir.k}">${H.dir.t}</span></div><div>${H.why}</div>
     <div class="ch">局勢</div><ul>${H.sit.map(x=>`<li>${x}</li>`).join('')}</ul>
-    <div class="ch">接下來</div><div class="nx">${H.next}</div>${outsGame(H)}
+    <div class="ch">接下來</div><div class="nx">${H.next}</div>${ST.game.calc===false?outsGame(H):''}
     <div class="ch">數字</div><ul>${H.info.map(x=>`<li>${x}</li>`).join('')}</ul>${H.ft?`<div class="ft">${H.ft}</div>`:''}</div>`;
     else h+=`<button class="full" style="margin-top:10px" onclick="G.hintOpen=true;render()">看教練建議</button>`;
   }else if(!done){
