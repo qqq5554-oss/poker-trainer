@@ -140,6 +140,11 @@ input[type=range]{width:100%;accent-color:var(--brass);margin:12px 0 4px}
 .dir{display:inline-block;font-size:13px;border:1px solid;border-radius:6px;padding:0 8px;margin:6px 0 4px}
 .dir.agg{color:var(--brass)}
 .muted a{color:var(--brass)}
+.stp{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;margin:14px 0 4px}
+.stp span{text-align:center;font-family:Georgia,serif;font-size:15px;color:var(--mute);border-top:3px solid var(--line);padding-top:4px;line-height:1.2}
+.stp small{display:block;font-family:inherit;font-size:11px}
+.stp .cur{color:var(--brass);border-color:var(--brass)}.stp .ok{color:var(--ok);border-color:var(--ok)}.stp .no{color:var(--bad);border-color:var(--bad)}
+.ox p{margin:8px 0 0}.ox .cards.ow{flex-wrap:wrap;margin-top:6px}
 .cap{font-size:13px;color:var(--mute);margin:0 0 6px;line-height:1.5}.cap b{color:var(--ivory);font-weight:600}
 .kpi{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:14px}
 .kp{background:var(--felt-d);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
@@ -184,6 +189,7 @@ input[type=range]{width:100%;accent-color:var(--brass);margin:12px 0 4px}
 </nav>
 <script src="play.js"></script>
 <script src="stats.js"></script>
+<script src="outs.js"></script>
 <script>
 const RK='23456789TJQKA',SU='♠♥♦♣';
 const rd=r=>r===8?'10':RK[r];
@@ -236,7 +242,7 @@ function deal(k,ex=[]){
 }
 
 const KEY='pokerTrainer.v1';
-const blank=()=>({name:{c:0,t:0},vs:{c:0,t:0},pre:{c:0,t:0},eqN:0,wrong:{},play:{hands:0,won:0,net:0,dec:{c:0,t:0}},game:{stacks:[200,200,200,200,200,200],btn:-1,hint:'tap'},hist:[]});
+const blank=()=>({name:{c:0,t:0},vs:{c:0,t:0},pre:{c:0,t:0},eqN:0,wrong:{},play:{hands:0,won:0,net:0,dec:{c:0,t:0}},game:{stacks:[200,200,200,200,200,200],btn:-1,hint:'tap'},hist:[],outs:{c:0,t:0}});
 let ST;try{ST=JSON.parse(localStorage.getItem(KEY))}catch(e){}
 ST=Object.assign(blank(),ST||{});
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(ST))}catch(e){}};
@@ -440,12 +446,14 @@ function eqRun(){
   setTimeout(step,30);
 }
 function rEq(){
+  const seg=`<div class="seg" style="margin-bottom:6px"><button class="${EQM==='calc'?'on':''}" onclick="EQM='calc';render()">算勝率</button><button class="${EQM==='outs'?'on':''}" onclick="EQM='outs';render()">Outs 練習</button></div>`;
+  if(EQM==='outs'){M.innerHTML=`<h1>勝率</h1><p class="sub">一步一步學會數 outs、算機率，決定跟還是蓋</p>${seg}${rOuts()}`;return}
   const sl=(t,i)=>{const sel=EQ.sel[0]===t&&EQ.sel[1]===i,c=EQ[t][i];return cardH(c,'tap '+(sel?(c==null?'sel':'hl'):''),`onclick="eqSel('${t}',${i})"`)};
   const u=used();
   let pk='<div class="pick">';
   for(let s=0;s<4;s++)for(let r=12;r>=0;r--){const c=r*4+s;pk+=`<button class="${s===1||s===2?'red':''}" ${u.includes(c)?'disabled':''} onclick="eqPick(${c})" aria-label="${SU[s]}${rd(r)}">${rd(r)}<br>${SU[s]}</button>`}
   pk+='</div>';
-  let h=`<h1>勝率</h1><p class="sub">選好手牌和公共牌，模擬幾千局算出勝率</p>
+  let h=`<h1>勝率</h1><p class="sub">選好手牌和公共牌，模擬幾千局算出勝率</p>${seg}
   <div class="lbl">你的手牌</div><div class="cards">${sl('h',0)}${sl('h',1)}</div>
   <div class="lbl">公共牌（可留空）</div><div class="cards">${[0,1,2,3,4].map(i=>sl('b',i)).join('')}</div>
   <div class="lbl">點上面的格子選位置，再從下面挑牌</div>${pk}
@@ -479,7 +487,7 @@ function rRec(){
   else{
     const w=Object.entries(ST.wrong).sort((a,b)=>b[1]-a[1]).slice(0,10);
     const row=(n,o)=>`<div class="stat"><span>${n}</span><span><span class="v">${pct(o)}</span> <span class="muted">${o.c}/${o.t}</span></span></div>`;
-    h+=`${row('認牌型',ST.name)}${row('比大小',ST.vs)}${row('起手牌',ST.pre)}
+    h+=`${row('認牌型',ST.name)}${row('比大小',ST.vs)}${row('起手牌',ST.pre)}${row('Outs 計算',ST.outs)}
     <div class="stat"><span>勝率計算</span><span class="muted">已算 ${ST.eqN} 次</span></div>
     <div class="stat"><span>模擬牌局</span><span class="muted">已打 ${ST.play.hands} 手　<a href="#" onclick="REC='an';render();return false">看分析</a></span></div>
     <div class="lbl" style="margin-top:20px">起手牌最常答錯</div>
