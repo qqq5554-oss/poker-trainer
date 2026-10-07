@@ -36,7 +36,7 @@ async (hands) => {
   const sum = a => a.reduce((x, y) => x + y, 0);
   ST.game.stacks = [200, 200, 200, 200, 200, 200]; ST.game.btn = -1; save();
   go('play');
-  let coachSeen = 0, played = 0, rebuys = 0, showdowns = 0, splits = 0, sidePots = 0, idle = 0;
+  let osSeen = 0, coachSeen = 0, played = 0, rebuys = 0, showdowns = 0, splits = 0, sidePots = 0, idle = 0;
   while (played < hands) {
     if (ST.game.stacks[0] < BBV) { gRebuy(); rebuys++; }
     gStart();
@@ -48,7 +48,12 @@ async (hands) => {
       if (now !== startTotal) { errs.push(`第 ${G.no} 手籌碼不守恆：${now} ≠ ${startTotal}`); break; }
       if (G.P.some(p => p.stack < 0)) { errs.push(`第 ${G.no} 手出現負籌碼`); break; }
       if (G.cur === 0) {
-        const h = G.hint, txt = [h.title, h.why, h.next, h.dir && h.dir.t, ...(h.sit || []), ...h.info].join('|');
+        const h = G.hint, txt = [h.title, h.why, h.next, h.dir && h.dir.t, ...(h.sit || []), ...h.info, outsGame(h)].join('|');
+        if (h.os) {
+          const dr = drawInfo(G.P[0].hole, G.board);
+          if (!dr || dr.o !== h.os.n) { errs.push(`第 ${G.no} 手教練的 outs ${h.os.n} 和 drawInfo ${dr && dr.o} 不一致`); break; }
+          osSeen++;
+        }
         if (!h.title || !h.why || !h.next || !h.dir || !h.sit || !h.sit.length || /undefined|NaN|null|Infinity/.test(txt)) {
           errs.push(`第 ${G.no} 手教練建議不完整：${txt}`); break;
         }
@@ -126,7 +131,7 @@ async (hands) => {
     }
     go('play');
   }
-  return {kinds, coachSeen, played, rebuys, showdowns, splits, sidePots, errs, stacks: ST.game.stacks, stats: ST.play};
+  return {osSeen, kinds, coachSeen, played, rebuys, showdowns, splits, sidePots, errs, stacks: ST.game.stacks, stats: ST.play};
 }
 """
 
@@ -161,6 +166,7 @@ def main():
 
     print(f"打了 {res['played']} 手：攤牌 {res['showdowns']}、有邊池 {res['sidePots']}、"
           f"平分 {res['splits']}、你重新買入 {res['rebuys']} 次、檢查教練建議 {res['coachSeen']} 次")
+    print(f"牌局中遇到聽牌、檢查 Outs 計算 {res['osSeen']} 次")
     print(f"Outs 練習出了 {sum(res['kinds'].values())} 題：{res['kinds']}")
     print(f"最後籌碼：{res['stacks']}")
     errs = res["errs"] + [f"JS 錯誤：{e}" for e in page_errs]

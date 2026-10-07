@@ -301,7 +301,14 @@ function coach(){
   const eff=Math.min(p.stack,Math.max(...opps.map(q=>q.stack))),spr=eff/pot;
   if(eff>0&&spr<=2&&rd.own!==false)sit.push('剩下的籌碼不到底池的 2 倍，有頂對以上的牌就準備打到底（全下），不用太猶豫');
   else if(spr>=8&&rd.c<=1)sit.push(`籌碼還很深（剩下的籌碼是底池的 ${Math.floor(spr)} 倍），只有一對的話，別把全部籌碼打進去`);
-  const R=(o)=>Object.assign({sit,info,ft},o);
+  let os=null;const oi=G.street<3?outsInfo(p.hole,G.board):null;
+  if(oi){
+    const n=oi.outs,turn=G.street===2,mult=!turn&&call>0&&(call>=p.stack||!opps.some(canAct))?4:2;
+    os=Object.assign(oi,{h:p.hole,b:G.board,n,turn,mult,call,pot,est:Math.min(n*mult,100),
+      exact:Math.round((turn?n/46:mult===4?1-(47-n)*(46-n)/(47*46):n/47)*1000)/10,need:call>0?Math.round(call/(pot+call)*100):null});
+    const k=info.findIndex(x=>x.startsWith('聽牌：'));if(k>=0)info.splice(k,1);
+  }
+  const R=(o)=>Object.assign({sit,info,ft,os},o);
   if(call===0){
     if(eq>=.6){
       let f=2/3,w2='下注約底池的 2/3，讓比你差的牌付錢，也讓聽牌的人不能免費看下一張。';
@@ -312,7 +319,7 @@ function coach(){
     }
     if(dr&&dr.o>=8&&G.street<3&&opp<=2&&!opps.some(q=>q.bot.station)){
       const to=cap(Math.max(BBV,pot/2));
-      return R({cat:'a',ok:['a','p'],to,title:`下注 ${to}（半詐唬），或過牌`,dir:A('積極：半詐唬'),why:`你還沒成牌，但有 ${dr.o} 張 outs 的強聽牌。現在下注叫「半詐唬」：對手蓋牌你直接贏，被跟注也還有約 ${dr.p}% 的機會中牌。對手不多時特別好用。`,next:'中了牌就積極下注；沒中而對手下大注，就放棄。'});
+      return R({cat:'a',ok:['a','p'],to,title:`下注 ${to}（半詐唬），或過牌`,dir:A('積極：半詐唬'),why:`你還沒成牌，但有 ${dr.o} 張 outs 的強聽牌。現在下注叫「半詐唬」：對手蓋牌你直接贏，被跟注也還有約 ${Math.min(dr.o*2,99)}% 的機會在下一張中牌。對手不多時特別好用。`,next:'中了牌就積極下注；沒中而對手下大注，就放棄。'});
     }
     if(G.street===1&&pfr===0&&opp===1&&!tex.wet&&opps[0].bot.bluffable){
       const to=cap(Math.max(BBV,pot*.4));
@@ -410,7 +417,7 @@ function rPlay(){
     const H=G.hint;
     if(G.hintOpen)h+=`<div class="fb coach"><b>教練建議：${H.title}</b><div><span class="dir ${H.dir.k}">${H.dir.t}</span></div><div>${H.why}</div>
     <div class="ch">局勢</div><ul>${H.sit.map(x=>`<li>${x}</li>`).join('')}</ul>
-    <div class="ch">接下來</div><div class="nx">${H.next}</div>
+    <div class="ch">接下來</div><div class="nx">${H.next}</div>${outsGame(H)}
     <div class="ch">數字</div><ul>${H.info.map(x=>`<li>${x}</li>`).join('')}</ul>${H.ft?`<div class="ft">${H.ft}</div>`:''}</div>`;
     else h+=`<button class="full" style="margin-top:10px" onclick="G.hintOpen=true;render()">看教練建議</button>`;
   }else if(!done){

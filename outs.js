@@ -56,8 +56,8 @@ function oAns(k){const q=OQ;if(q.ans[q.step]!=null)return;q.ans[q.step]=k;rec('o
 function oNext(){OQ.step++;render();window.scrollTo(0,0)}
 function oNew(){newOQ();render();window.scrollTo(0,0)}
 
-function oExplain(i){
-  const q=OQ,mini=a=>`<div class="cards mini ow">${a.map(c=>cardH(c)).join('')}</div>`,rs=q.ranks.map(rd);
+function oExplain(i,q=OQ){
+  const mini=a=>`<div class="cards mini ow">${a.map(c=>cardH(c)).join('')}</div>`,rs=q.ranks.map(rd);
   const cur=handName(ev([...q.h,...q.b]));
   if(i===0){
     const f=`你的 ${SU[q.fs]} 有 4 張（手牌 ${q.hs} 張、公共牌 ${q.seen-q.hs} 張）。同花要 5 張同花色，再來一張 ${SU[q.fs]} 就成了，這叫「同花聽牌」。`;
@@ -67,9 +67,9 @@ function oExplain(i){
   if(i===1){
     let h='<p>outs 就是「下一張出來，你就成牌」的牌。一張一張數：</p>';
     if(q.fl.length)h+=`<p><b>同花的 outs</b>：${SU[q.fs]} 一共有 13 張，你已經看到 ${q.seen} 張（手牌加公共牌），剩下 13 − ${q.seen} = <b>${q.fl.length}</b> 張。</p>${mini(q.fl)}`;
-    if(q.st.length)h+=`<p><b>順子的 outs</b>：${rs.join(' 或 ')} 都能成順。每種點數有 4 張（♠♥♦♣ 四種花色），${q.ranks.length} × 4 = <b>${q.st.length}</b> 張。</p>${mini(q.st)}`;
+    if(q.st.length)h+=`<p><b>順子的 outs</b>：${q.ranks.length>1?rs.join(' 或 ')+' 都能成順':rs[0]+' 能成順'}。每種點數有 4 張（♠♥♦♣ 四種花色），${q.ranks.length} × 4 = <b>${q.st.length}</b> 張。</p>${mini(q.st)}`;
     if(q.ov.length)h+=`<p><b>重複的要扣掉</b>：${q.ov.map(cn).join('、')} 同時是同花和順子的 outs，只能算一次：${q.fl.length} + ${q.st.length} − ${q.ov.length} = <b>${q.n}</b> 張。</p>`;
-    h+=`<p>所以你的 outs 一共 <b>${q.n}</b> 張。${q.fl.length&&q.ans[1]!=null&&q.opts[1][q.ans[1]]===13?'常見錯誤是直接算 13 張，忘了扣掉已經看得到的同花色牌。':''}</p>`;
+    h+=`<p>所以你的 outs 一共 <b>${q.n}</b> 張。${q.fl.length&&q.ans&&q.ans[1]!=null&&q.opts[1][q.ans[1]]===13?'常見錯誤是直接算 13 張，忘了扣掉已經看得到的同花色牌。':''}</p>`;
     return h;
   }
   if(i===2){
@@ -108,4 +108,21 @@ function rOuts(){
     <button class="pri full" onclick="oNew()">下一題</button>`;
   }
   return h;
+}
+
+// 牌局中遇到聽牌：教練建議裡用這一手的實際數字跑一遍 5 個步驟
+function outsGame(H){
+  const q=H.os;if(!q)return '';
+  const pair=catOf(ev([...q.h,...q.b]))>=1,go=q.est>=q.need;
+  const s3=q.turn?'現在是轉牌，只剩河牌一張還沒發，所以用 <b>×2</b>。':q.mult===4?'現在是翻牌，你跟注後已經沒有人能再下注（有人全下了），一定能看完轉牌和河牌兩張，所以用 <b>×4</b>。':q.call>0?'現在是翻牌，但跟注後轉牌可能還要再付錢，你不一定能免費看到河牌，所以保守一點只算下一張，用 <b>×2</b>。':'現在是翻牌，先算下一張就中的機率，用 <b>×2</b>。';
+  let s5;
+  if(q.call>0){
+    s5=`<p>只看聽牌：約 ${q.est}% 比需要的 ${q.need}% ${go?'高，跟注划算':'低，只靠聽牌跟注不划算'}。</p>`;
+    if(go!==(H.cat!=='f'))s5+=`<p class="cap">教練的最後建議是「${H.title}」，和只看聽牌的結果不同：教練是用電腦模擬整手牌來算勝率，${pair?'還算進了你現在已經有的對子：就算沒中聽牌，也可能靠這對贏。':'除了順子和同花，還算進了「手上的牌配成對子也可能贏」的機會。不過對手下注時通常已經有對子以上，這部分常常靠不住；兩邊差很多時，照聽牌的算法保守一點也合理。'}</p>`;
+  }else s5=`<p>沒人下注時，可以免費過牌看下一張。${q.n>=8?'你的聽牌很強（8 張以上 outs），也可以考慮下注（半詐唬）：對手蓋牌你直接贏，被跟注也還有機會中牌。':''}</p>`;
+  const st=[[OSTEP[0],oExplain(0,q)],[OSTEP[1],oExplain(1,q)],
+    [OSTEP[2],`<p>${s3}</p><p>${q.n} × ${q.mult} = <b>約 ${q.est}%</b>（精確算出來是 ${q.exact}%）</p>`],
+    [OSTEP[3],q.call>0?`<p>需要的勝率 ＝ 你要跟的錢 ÷ 跟完之後底池的總數。</p><p>現在底池是 ${q.pot}（包含這一輪大家下的錢），你跟 ${q.call} 之後是 ${q.pot} ＋ ${q.call} ＝ ${q.pot+q.call}。</p><p>${q.call} ÷ ${q.pot+q.call} ＝ <b>約 ${q.need}%</b></p>`:'<p>現在沒有人下注，你可以免費看下一張，不用算底池賠率。</p>'],
+    [OSTEP[4],s5]];
+  return `<details class="os" ${G.osOpen?'open':''} ontoggle="G.osOpen=this.open"><summary>Outs 計算：${OKN[q.kind]}，${q.n} 張 outs，約 ${q.est}%${q.call>0?`，需要 ${q.need}%`:''}<span>點開看 5 個步驟</span></summary>${st.map((x,i)=>`<div class="ox"><div class="ch">第 ${i+1} 步：${x[0]}</div>${x[1]}</div>`).join('')}</details>`;
 }
