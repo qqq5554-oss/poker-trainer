@@ -15,9 +15,10 @@
 <style>
 :root{--loss:#E07A6E;--felt:#1E4A38;--felt-d:#153729;--felt-l:#285B46;--line:#3E7059;--ivory:#F7F2E6;--ink:#1C1C1A;--red:#BE2F2A;--brass:#D6B35E;--mute:#A8C4B6;--ok:#8FD19E;--bad:#F09A8E}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;height:100%}
-html{overflow:hidden;background:var(--felt)}
-body{background:var(--felt);color:var(--ivory);font-family:-apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;font-size:16px;line-height:1.6;padding-top:env(safe-area-inset-top);box-sizing:border-box;overflow-y:auto;overscroll-behavior-y:none}
+html,body{margin:0}
+html{min-height:calc(100% + env(safe-area-inset-top));background:var(--felt)}
+body:before{content:"";position:fixed;top:0;left:0;right:0;height:env(safe-area-inset-top);background:var(--felt);z-index:6}
+body{background:var(--felt);color:var(--ivory);font-family:-apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;font-size:16px;line-height:1.6;padding-top:env(safe-area-inset-top)}
 main{max-width:520px;margin:0 auto;padding:16px 16px calc(88px + env(safe-area-inset-bottom))}
 h1{font-size:24px;font-weight:600;margin:4px 0 0;letter-spacing:.04em}
 .sub{color:var(--mute);font-size:14px;margin:0 0 14px}
@@ -52,6 +53,7 @@ button.full{width:100%;margin-top:6px}
 .wrong{border-color:var(--bad)!important;color:var(--bad)}
 .score{display:block;text-align:right;font-size:13px;color:var(--mute);margin-top:8px}
 nav{position:fixed;left:0;right:0;bottom:0;background:var(--felt-d);border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom);z-index:5}
+nav:after{content:"";position:absolute;top:100%;left:0;right:0;height:200px;background:var(--felt-d)}
 nav button{flex:1;border:0;border-radius:0;font-size:12px;color:var(--mute);padding:8px 0 6px;min-height:58px;display:flex;flex-direction:column;align-items:center;gap:1px}
 nav button .ic{font-family:Georgia,serif;font-size:21px;line-height:1}
 nav button.on{color:var(--brass)}
@@ -264,7 +266,7 @@ const rec=(k,ok)=>{ST[k].t++;if(ok)ST[k].c++;save()};
 const pct=o=>o.t?Math.round(o.c/o.t*100)+'%':'—';
 
 let tab='rank';const M=document.querySelector('main');
-const toTop=()=>{document.body.scrollTop=0;window.scrollTo(0,0)};
+const toTop=()=>window.scrollTo(0,0);
 function go(t){tab=t;document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));render();toTop();if(t==='play'&&G.pending)step()}
 function render(){({rule:rRule,rank:rRank,pre:rPre,eq:rEq,play:rPlay,rec:rRec})[tab]()}
 
