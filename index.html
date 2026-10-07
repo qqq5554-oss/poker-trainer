@@ -15,8 +15,9 @@
 <style>
 :root{--loss:#E07A6E;--felt:#1E4A38;--felt-d:#153729;--felt-l:#285B46;--line:#3E7059;--ivory:#F7F2E6;--ink:#1C1C1A;--red:#BE2F2A;--brass:#D6B35E;--mute:#A8C4B6;--ok:#8FD19E;--bad:#F09A8E}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0}
-body{background:var(--felt);color:var(--ivory);font-family:-apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;font-size:16px;line-height:1.6;padding-top:env(safe-area-inset-top)}
+html,body{margin:0;height:100%}
+html{overflow:hidden;background:var(--felt)}
+body{background:var(--felt);color:var(--ivory);font-family:-apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;font-size:16px;line-height:1.6;padding-top:env(safe-area-inset-top);box-sizing:border-box;overflow-y:auto;overscroll-behavior-y:none}
 main{max-width:520px;margin:0 auto;padding:16px 16px calc(88px + env(safe-area-inset-bottom))}
 h1{font-size:24px;font-weight:600;margin:4px 0 0;letter-spacing:.04em}
 .sub{color:var(--mute);font-size:14px;margin:0 0 14px}
@@ -263,7 +264,8 @@ const rec=(k,ok)=>{ST[k].t++;if(ok)ST[k].c++;save()};
 const pct=o=>o.t?Math.round(o.c/o.t*100)+'%':'—';
 
 let tab='rank';const M=document.querySelector('main');
-function go(t){tab=t;document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));render();window.scrollTo(0,0);if(t==='play'&&G.pending)step()}
+const toTop=()=>{document.body.scrollTop=0;window.scrollTo(0,0)};
+function go(t){tab=t;document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));render();toTop();if(t==='play'&&G.pending)step()}
 function render(){({rule:rRule,rank:rRank,pre:rPre,eq:rEq,play:rPlay,rec:rRec})[tab]()}
 
 /* 規則 */

@@ -60,8 +60,8 @@ function newOQ(){
 }
 function oRight(i){const q=OQ;return [OKIND.indexOf(q.kind),q.opts[1].indexOf(q.n),q.mult===4?1:0,q.opts[3].indexOf(q.need),q.est>=q.need?0:1][i]}
 function oAns(k){const q=OQ;if(q.ans[q.step]!=null)return;q.ans[q.step]=k;rec('outs',k===oRight(q.step));render()}
-function oNext(){OQ.step++;render();window.scrollTo(0,0)}
-function oNew(){newOQ();render();window.scrollTo(0,0)}
+function oNext(){OQ.step++;render();toTop()}
+function oNew(){newOQ();render();toTop()}
 
 function oExplain(i,q=OQ){
   const mini=a=>`<div class="cards mini ow">${a.map(c=>cardH(c)).join('')}</div>`,rs=q.ranks.map(rd);
