@@ -285,7 +285,9 @@ function coach(){
     const lim=wild?.15:.1;
     if(t===2&&call<=p.stack*lim)return R({cat:'p',ok:['p','f'],title:`跟注 ${call}`,dir:Md('穩健：跟注看翻牌'),why:`${dl(l)} 是可玩的牌，跟注 ${call} 不到你籌碼的${wild?'一成半':'一成'}，可以跟進去看翻牌。${wild?`${ager.name}常常亂加注，可以放寬一點。`:''}`,next:callNext});
     if(t===2)return R({cat:'f',ok:['f','p'],title:'蓋牌',dir:C('保守：蓋牌'),why:`${dl(l)} 可以玩，但要跟 ${call} 太貴了（超過籌碼的${wild?'一成半':'一成'}），對手加這麼大通常牌很好。`,next:'蓋牌後看看對手最後亮什麼牌，下次更好判斷。'});
-    return R({cat:'f',ok:['f'],title:'蓋牌',dir:C('保守：蓋牌'),why:`有人加注通常代表牌不錯。${dl(l)} 跟進去很容易被壓制，蓋牌。`,next:'蓋牌後看看對手最後亮什麼牌，下次更好判斷。'});
+    const pp=l.length===2,deep=ager&&Math.min(p.stack,ager.stack)>=call*15;
+    if(pp&&late&&deep&&call<=p.stack*.1&&(wild||lp+opps.length>=2))return R({cat:'p',ok:['p','f'],title:`跟注 ${call}，或蓋牌`,dir:Md('穩健：便宜看翻牌'),why:`${dl(l)} 這種小對子在後位，跟注的錢不多、雙方籌碼又夠深，可以跟進去「賭三條」：翻牌中三條的機會約 12%（大約 8 次中 1 次），中了常能從${ager.name}${wild?'很寬的加注範圍':'的大牌'}身上贏一個大底池。沒中就放棄。`,next:'翻牌沒中三條，對手下注就蓋牌；中了三條就積極下注或加注。'});
+    return R({cat:'f',ok:['f'],title:'蓋牌',dir:C('保守：蓋牌'),why:pp?`有人加注，${dl(l)} 這種小對子沒中三條很難贏。跟注要夠便宜、籌碼要夠深（至少是跟注金額的 15 倍）才划算，現在不符合，蓋牌。`:`有人加注通常代表牌不錯。${dl(l)} 跟進去很容易被更大的同類牌壓制（例如對上踢腳更大的牌），蓋牌。`,next:'蓋牌後看看對手最後亮什麼牌，下次更好判斷。'});
   }
   const dr=drawInfo(p.hole,G.board),tex=boardTex(G.board),rd=handRead(p.hole,G.board);
   const eq=eqRange(1500),e=Math.round(eq*100),eRand=Math.round(eqMC(p.hole,G.board,opp,800)*100);

@@ -121,7 +121,7 @@ async (hands) => {
   if (!errs.length) {
     // 對手範圍：阿明（緊）在前位加注後，AA 的可能性要遠高於 72s；教練一次思考要夠快
     {
-      gStart(); const i = 1, W = G.R[i], idx = (a, b) => CB.findIndex(([x, y]) => x === Math.min(a, b) && y === Math.max(a, b));
+      ST.game.stacks[0] = 200; gStart(); const i = 1, W = G.R[i], idx = (a, b) => CB.findIndex(([x, y]) => x === Math.min(a, b) && y === Math.max(a, b));
       G.cur = -1; clearTimeout(G.timer);
       rangeUpd(i, 'raise');
       const aa = W[idx(48, 49)], s72 = W[idx(20, 0)];
