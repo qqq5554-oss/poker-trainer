@@ -8,6 +8,7 @@
   - 牌局中的速算練習每題都有正確答案，作答完會出現結論
   - 每次輪到你都有勝率條、速算小抄顯示正常
   - 2 到 6 人桌輪流打，打法隨機；對手名字有 HTML 特殊字元也能正常顯示
+  - 「籌碼歸位」和「清除紀錄」都會保留自己設定的對手名字、打法和開關
   - 每次教練建議都有專家分析；推算的對手範圍合理（緊的玩家加注後 AA 遠比 72s 可能），推算勝率夠快
   - 每手都有記到牌局紀錄，「紀錄 → 牌局分析」能正常顯示
   - Outs 練習出 1000 題：outs 數和逐張檢查一致、每步選項有正確答案、說明沒有錯字
@@ -114,6 +115,17 @@ async (hands) => {
     sizes[G.P.length] = (sizes[G.P.length] || 0) + 1;
     if (oppList()[0].n === '<b>&小' && document.querySelector('.tbl .nm b')) { errs.push('對手名字裡的 HTML 被當成標籤'); break; }
     played++;
+  }
+  // 重新開始和清除紀錄都不能把自己設定的對手名字、打法洗掉
+  if (!errs.length) {
+    const keep = JSON.stringify(ST), mine = [{n: '大雄', s: 'sta'}, {n: '<靜香>', s: 'nit'}];
+    ST.game.opp = mine.map(o => Object.assign({}, o)); ST.game.hint = 'auto'; ST.game.calc = false; save();
+    window.confirm = () => true;
+    gReset(); clr();
+    if (JSON.stringify(ST.game.opp) !== JSON.stringify(mine)) errs.push(`重設後對手設定不見了：${JSON.stringify(ST.game.opp)}`);
+    if (ST.game.hint !== 'auto' || ST.game.calc !== false) errs.push('清除紀錄把教練建議、速算練習的設定也洗掉了');
+    if (ST.play.hands !== 0 || ST.game.stacks.length !== 3 || ST.game.stacks.some(x => x !== START)) errs.push(`清除紀錄後成績或籌碼沒有歸位：${ST.play.hands} 手，籌碼 ${ST.game.stacks}`);
+    ST = JSON.parse(keep); save();
   }
   // 三人平分：公共牌就是同花大順，大家都平手；底池 50 要分成 20、20、10，不能有零頭
   if (!errs.length) {

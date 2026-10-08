@@ -519,7 +519,13 @@ function exp(){
   const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='poker-trainer-'+new Date().toISOString().slice(0,10)+'.json';
   document.body.appendChild(a);a.click();a.remove();
 }
-function clr(){if(confirm('確定要清除所有練習紀錄？')){ST=blank();save();render()}}
+// 清除紀錄：只清成績；對手名字、打法和各項開關保留，籌碼歸位
+function clr(){
+  if(!confirm('確定要清除所有練習和牌局紀錄？（對手的名字、打法和設定會保留，籌碼回到起始）'))return;
+  const g=ST.game,keep={opp:g.opp,hint:g.hint,calc:g.calc,bar:g.bar};
+  ST=blank();Object.assign(ST.game,keep);ST.game.stacks=Array(oppList().length+1).fill(START);
+  clearTimeout(G.timer);G={phase:'idle',P:[],board:[],log:[],dec:[]};save();render();
+}
 let REC='pr';
 function rRec(){
   const sa=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone;
