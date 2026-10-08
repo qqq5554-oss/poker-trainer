@@ -279,9 +279,12 @@ function deal(k,ex=[]){
 }
 
 const KEY='pokerTrainer.v1';
-const blank=()=>({name:{c:0,t:0},vs:{c:0,t:0},pre:{c:0,t:0},eqN:0,wrong:{},play:{hands:0,won:0,net:0,dec:{c:0,t:0}},game:{stacks:[200,200,200,200,200,200],opp:OPP0.map(o=>Object.assign({},o)),btn:-1,hint:'tap',calc:true,bar:true},hist:[],outs:{c:0,t:0}});
+const blank=()=>({name:{c:0,t:0},vs:{c:0,t:0},pre:{c:0,t:0},eqN:0,wrong:{},play:{hands:0,won:0,net:0,dec:{c:0,t:0}},chipv:2,game:{stacks:Array(6).fill(START),opp:OPP0.map(o=>Object.assign({},o)),btn:-1,hint:'tap',calc:true,bar:true},hist:[],outs:{c:0,t:0}});
 let ST;try{ST=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+// 舊資料是盲注 1／2、起始 200：籌碼重新從 2000 開始，過去的輸贏 × 10 換成新單位（要在合併預設值之前判斷，預設值已經帶 chipv:2）
+const oldChips=!!ST&&ST.chipv!==2;
 ST=Object.assign(blank(),ST||{});
+if(oldChips){ST.chipv=2;ST.play.net*=10;(ST.hist||[]).forEach(h=>h.net*=10);ST.game.stacks=Array(oppList().length+1).fill(START);ST.game.btn=-1;try{localStorage.setItem(KEY,JSON.stringify(ST))}catch(e){}}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(ST))}catch(e){}};
 const rec=(k,ok)=>{ST[k].t++;if(ok)ST[k].c++;save()};
 const pct=o=>o.t?Math.round(o.c/o.t*100)+'%':'—';

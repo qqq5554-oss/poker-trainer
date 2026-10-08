@@ -1,6 +1,7 @@
 """牌局引擎自動測試：用 Playwright 開啟網站，隨機替「你」做決定，連續打幾百手牌。
 
 檢查項目：
+  - 所有籌碼和下注都是 10 的倍數（不會出現 1、5 這種零頭）
   - 籌碼守恆：每一刻「所有人籌碼 + 已下注」等於這手開始時的總籌碼
   - 沒有負籌碼、每手都能正常結束（不會卡住）
   - 教練建議每個欄位都有內容，沒有 undefined、NaN 之類的錯字
@@ -38,7 +39,7 @@ async (hands) => {
   const wait = () => new Promise(r => setTimeout(r, 0));
   const errs = [];
   const sum = a => a.reduce((x, y) => x + y, 0);
-  ST.game.stacks = [200, 200, 200, 200, 200, 200]; ST.game.btn = -1; save();
+  ST.game.stacks = Array(6).fill(START); ST.game.btn = -1; save();
   go('play');
   let rangeMs = 0, qzSeen = 0, osSeen = 0, coachSeen = 0, played = 0, rebuys = 0, showdowns = 0, splits = 0, sidePots = 0, idle = 0;
   // 每 40 手換一種桌子：2 到 6 人、隨機打法，其中一位名字有 HTML 特殊字元（要正常顯示、不能變成標籤）
@@ -46,7 +47,7 @@ async (hands) => {
   const setTable = k => {
     const ks = Object.keys(BSTY);
     ST.game.opp = Array.from({length: k}, (_, j) => ({n: j === 0 ? '<b>&小' : '電腦' + (j + 1), s: ks[Math.floor(Math.random() * ks.length)]}));
-    ST.game.stacks = Array(k + 1).fill(200); ST.game.btn = -1;
+    ST.game.stacks = Array(k + 1).fill(START); ST.game.btn = -1;
   };
   while (played < hands) {
     if (played % 40 === 0) setTable([5, 1, 2, 3, 4][(played / 40) % 5]);
@@ -58,6 +59,7 @@ async (hands) => {
       if (++steps > 5000) { errs.push(`第 ${G.no} 手卡住：phase=${G.phase} cur=${G.cur} street=${G.street}`); break; }
       const now = sum(G.P.map(p => p.stack + p.total));
       if (now !== startTotal) { errs.push(`第 ${G.no} 手籌碼不守恆：${now} ≠ ${startTotal}`); break; }
+      if (G.P.some(p => p.stack % U || p.bet % U || p.total % U)) { errs.push(`第 ${G.no} 手出現不是 ${U} 倍數的籌碼：${G.P.map(p => p.stack + '/' + p.bet).join(' ')}`); break; }
       if (G.P.some(p => p.stack < 0)) { errs.push(`第 ${G.no} 手出現負籌碼`); break; }
       if (G.cur === 0) {
         // 速算練習：每題都有正確答案，全部作答後出現結論
@@ -113,18 +115,29 @@ async (hands) => {
     if (oppList()[0].n === '<b>&小' && document.querySelector('.tbl .nm b')) { errs.push('對手名字裡的 HTML 被當成標籤'); break; }
     played++;
   }
+  // 三人平分：公共牌就是同花大順，大家都平手；底池 50 要分成 20、20、10，不能有零頭
+  if (!errs.length) {
+    const keep = JSON.stringify(ST);
+    ST.game.opp = [{n: '甲', s: 'bal'}, {n: '乙', s: 'bal'}]; ST.game.stacks = [START, START, START]; ST.game.btn = -1;
+    gStart(); clearTimeout(G.timer);
+    G.board = [48, 44, 40, 36, 32]; G.P.forEach((p, k) => { p.folded = false; p.total = [20, 20, 10][k]; p.stack = 100; });
+    const before = G.P.map(p => p.stack); showdown();
+    const got = G.P.map((p, k) => p.stack - before[k]);
+    if (got.reduce((a, b) => a + b, 0) !== 50 || got.some(x => x % U)) errs.push(`三人平分底池 50 分錯了：${got}`);
+    G.phase = 'idle'; ST = JSON.parse(keep); save();
+  }
   // 兩人對打：莊家下小盲、翻牌前先行動；翻牌後大盲先行動
   if (!errs.length) {
-    ST.game.opp = [{n: '電腦', s: 'bal'}]; ST.game.stacks = [200, 200]; ST.game.btn = -1;
+    ST.game.opp = [{n: '電腦', s: 'bal'}]; ST.game.stacks = [START, START]; ST.game.btn = -1;
     for (let k = 0; k < 6 && !errs.length; k++) {
-      ST.game.stacks = [200, 200]; gStart(); clearTimeout(G.timer);
-      if (G.P[G.btn].total !== 1 || G.P[1 - G.btn].total !== 2) errs.push(`兩人對打盲注錯：莊家下 ${G.P[G.btn].total}`);
+      ST.game.stacks = [START, START]; gStart(); clearTimeout(G.timer);
+      if (G.P[G.btn].total !== SBV || G.P[1 - G.btn].total !== BBV) errs.push(`兩人對打盲注錯：莊家下 ${G.P[G.btn].total}`);
       if (G.cur !== G.btn) errs.push(`兩人對打翻牌前應該莊家先行動，現在是座位 ${G.cur}`);
       if (ORD(BBi()) !== 0 || ORD(G.btn) !== 1) errs.push('兩人對打翻牌後應該大盲先行動');
       G.phase = 'idle';
     }
   }
-  ST.game.opp = OPP0.map(o => Object.assign({}, o)); ST.game.stacks = Array(6).fill(200); ST.game.btn = -1;
+  ST.game.opp = OPP0.map(o => Object.assign({}, o)); ST.game.stacks = Array(6).fill(START); ST.game.btn = -1;
   // 牌局分析：每手都有紀錄，分析頁顯示正常
   if (!errs.length) {
     const want = Math.min(played, 500), last = ST.hist[ST.hist.length - 1];
@@ -146,7 +159,7 @@ async (hands) => {
   if (!errs.length) {
     // 對手範圍：阿明（緊）在前位加注後，AA 的可能性要遠高於 72s；教練一次思考要夠快
     {
-      ST.game.stacks[0] = 200; gStart(); const i = 1, W = G.R[i], idx = (a, b) => CB.findIndex(([x, y]) => x === Math.min(a, b) && y === Math.max(a, b));
+      ST.game.stacks[0] = START; gStart(); const i = 1, W = G.R[i], idx = (a, b) => CB.findIndex(([x, y]) => x === Math.min(a, b) && y === Math.max(a, b));
       G.cur = -1; clearTimeout(G.timer);
       rangeUpd(i, 'raise');
       const aa = W[idx(48, 49)], s72 = W[idx(20, 0)];

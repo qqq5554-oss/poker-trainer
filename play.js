@@ -1,5 +1,7 @@
 /* 牌局 */
-const BBV=2,SBV=1,START=200;
+// 籌碼單位 10：小盲 10、大盲 20、起始 2000（100 個大盲）；所有下注金額都是 10 的倍數
+const BBV=20,SBV=10,START=2000,U=10;
+const r10=v=>Math.round(v/U)*U;
 const POSZ={BTN:'莊家',SB:'小盲',BB:'大盲',UTG:'前位',HJ:'中位',CO:'切位'};
 const STN=['翻牌前','翻牌','轉牌','河牌','攤牌'];
 // 電腦對手的 5 種打法；說明文字用名字，不用代名詞（名字可以自己改）
@@ -120,7 +122,7 @@ function doAct(i,type,to){
   else if(type==='check')txt='過牌';
   else if(type==='call'){const x=put(i,call);txt=p.allin?`全下跟注 ${x}`:`跟注 ${x}`}
   else{
-    const max=p.bet+p.stack;to=Math.min(Math.max(Math.round(to),G.curBet+G.lastRaise),max);
+    const max=p.bet+p.stack;to=Math.min(Math.max(r10(to),G.curBet+G.lastRaise),max);
     const was=G.curBet,pb=potT(),x=to-p.bet;put(i,x);G.lb={i,st:G.street,x,pb};
     if(to-was>=G.lastRaise)G.lastRaise=to-was;
     G.curBet=Math.max(was,to);G.ag[G.street]=i;
@@ -162,8 +164,9 @@ function showdown(){
     const el=L.filter(p=>p.total>=l);prev=l;if(!amt)return;
     const best=Math.max(...el.map(p=>p.val));
     const ws=el.filter(p=>p.val===best).sort((a,b)=>ORD(a.i)-ORD(b.i));
-    const sh=Math.floor(amt/ws.length);let rem=amt-sh*ws.length;
-    ws.forEach(p=>{p.stack+=sh+(rem>0?1:0);rem--});
+    // 平分時以 10 為單位，零頭依翻牌後的順序給前面的人
+    const sh=Math.floor(amt/ws.length/U)*U;let rem=amt-sh*ws.length;
+    ws.forEach(p=>{const x=rem>0?Math.min(U,rem):0;p.stack+=sh+x;rem-=x});
     pots.push({amt,w:ws.map(p=>p.i),best});
   });
   pots.forEach((x,k)=>{
@@ -206,15 +209,15 @@ function botDecide(i){
   }
   const eq=eqMC(p.hole,G.board,live().length-1,300);
   if(call===0){
-    if(eq>.62&&R<.45+b.aggr*.5)return {type:'raise',to:Math.max(BBV,Math.round(pot*(Math.random()<.5?.5:.66)))};
-    if(eq>.45&&R<b.aggr*.35)return {type:'raise',to:Math.max(BBV,Math.round(pot*.5))};
-    if(Math.random()<b.bluff)return {type:'raise',to:Math.max(BBV,Math.round(pot*.5))};
+    if(eq>.62&&R<.45+b.aggr*.5)return {type:'raise',to:Math.max(BBV,r10(pot*(Math.random()<.5?.5:.66)))};
+    if(eq>.45&&R<b.aggr*.35)return {type:'raise',to:Math.max(BBV,r10(pot*.5))};
+    if(Math.random()<b.bluff)return {type:'raise',to:Math.max(BBV,r10(pot*.5))};
     return {type:'check'};
   }
   const po=call/(pot+call);
-  if(eq>.72&&R<b.aggr)return {type:'raise',to:G.curBet+Math.max(G.lastRaise,Math.round((pot+call)*.7))};
+  if(eq>.72&&R<b.aggr)return {type:'raise',to:G.curBet+Math.max(G.lastRaise,r10((pot+call)*.7))};
   if(eq>=po+b.cadj)return {type:'call'};
-  if(Math.random()<b.bluff*.25)return {type:'raise',to:G.curBet+Math.max(G.lastRaise,Math.round((pot+call)*.6))};
+  if(Math.random()<b.bluff*.25)return {type:'raise',to:G.curBet+Math.max(G.lastRaise,r10((pot+call)*.6))};
   return {type:'fold'};
 }
 
@@ -258,7 +261,7 @@ function handRead(hole,board){
 function coach(){
   const p=G.P[0],call=Math.min(G.curBet-p.bet,p.stack),pot=potT(),pos=posOf(0);
   const opps=live().filter(q=>q.i!==0),opp=opps.length;
-  const cap=v=>Math.min(Math.round(v),p.bet+p.stack);
+  const cap=v=>Math.min(r10(v),p.bet+p.stack);
   const A=t=>({k:'agg',t}),Md=t=>({k:'mid',t}),C=t=>({k:'con',t});
   const agI=G.ag[G.street],ager=agI>0?G.P[agI]:null,sit=[];
   if(G.street===0){
@@ -285,7 +288,7 @@ function coach(){
       if(t===1||t===2||(t===3&&late))return R({cat:'a',ok:['a'],to,title:`加注到 ${to}`,dir:A('積極：加注入池'),why:`${dl(l)} 屬於「${TN[t]}」${t===3?'，而你在後位，可以玩':''}。好牌要主動加注入池：逼走弱牌，讓底池裡的人變少，比只跟注更容易贏。${lp?`前面有 ${lp} 人只跟注，所以每多一人多加 1 個大盲。`:''}`,next:'翻牌後如果中了對子以上或強聽牌，繼續下注；沒中而對手下注，大多可以放棄。'});
       if(pos==='BB'&&call===0)return R({cat:'p',ok:['p'],title:'過牌',dir:Md('穩健：免費看翻牌'),why:`${dl(l)} 不是好牌，但你是大盲、前面沒人加注，不用再花錢就能看翻牌，過牌就好。`,next:'翻牌要中到牌（對子以上或聽牌）才繼續；沒中就過牌，對手下注就蓋牌。'});
       if(t===3)return R({cat:'f',ok:['f'],title:'蓋牌',dir:C('保守：蓋牌'),why:`${dl(l)} 是「後位才玩」的牌，你在${where}，後面還有很多人要行動，蓋牌。`,next:'等你輪到後位（切位、莊家）時，這種牌就可以玩了。'});
-      return R({cat:'f',ok:['f'],title:'蓋牌',dir:C('保守：蓋牌'),why:`${dl(l)} 不在起手牌表裡。新手階段直接蓋牌，省下的籌碼就是賺到的。${pos==='SB'?'小盲雖然只要補 1，但翻牌後你最先行動，位置最差。':''}`,next:'蓋牌後看看其他人怎麼打，記住誰常加注、誰很少加注。'});
+      return R({cat:'f',ok:['f'],title:'蓋牌',dir:C('保守：蓋牌'),why:`${dl(l)} 不在起手牌表裡。新手階段直接蓋牌，省下的籌碼就是賺到的。${pos==='SB'?'小盲雖然只要再補 ${SBV}，但翻牌後你最先行動，位置最差。':''}`,next:'蓋牌後看看其他人怎麼打，記住誰常加注、誰很少加注。'});
     }
     const wild=ager&&ager.bot.wild,tight=ager&&ager.bot.honest;
     const callNext='翻牌要中到牌（對子以上或強聽牌）才繼續；沒中而對手下注，就蓋牌。';
@@ -386,7 +389,7 @@ function raiseOpts(){
   if(G.street===0&&G.curBet<=BBV){const l=BBV*limpers();o=[['3BB',3*BBV+l],['4BB',4*BBV+l],['5BB',5*BBV+l]]}
   else if(G.street===0)o=[['2.5倍',G.curBet*2.5],['3倍',G.curBet*3],['4倍',G.curBet*4]];
   else o=[['½池',.5],['⅔池',.66],['1池',1]].map(([n,f])=>[n,G.curBet+(pot+call)*f]);
-  o=o.map(([n,v])=>[n,Math.max(min,Math.min(max,Math.round(v)))]);o.push(['全下',max]);
+  o=o.map(([n,v])=>[n,Math.max(min,Math.min(max,r10(v)))]);o.push(['全下',max]);
   return {o,min,max};
 }
 function uAct(type){
@@ -403,7 +406,7 @@ function uAct(type){
   doAct(0,type,G.raiseTo);
 }
 function setRT(v){G.raiseTo=+v;const e=document.getElementById('rto');if(e)e.textContent=v;const s=document.getElementById('rsl');if(s)s.value=v}
-function gReset(){if(!confirm('所有人的籌碼回到 200，重新開始？'))return;clearTimeout(G.timer);ST.game.stacks=Array(oppList().length+1).fill(START);ST.game.btn=-1;save();G={phase:'idle',P:[],board:[],log:[],dec:[]};render()}
+function gReset(){if(!confirm(`所有人的籌碼回到 ${START}，重新開始？`))return;clearTimeout(G.timer);ST.game.stacks=Array(oppList().length+1).fill(START);ST.game.btn=-1;save();G={phase:'idle',P:[],board:[],log:[],dec:[]};render()}
 function gRebuy(){ST.game.stacks[0]=START;save();render()}
 function gHint(m){ST.game.hint=m;save();render()}
 function gCalc(v){ST.game.calc=v;save();render()}
@@ -411,7 +414,7 @@ function gBar(v){ST.game.bar=v;save();render()}
 // 對手設定：人數（1–5 位電腦）、名字、打法
 function gOppN(d){
   const o=oppList().map(x=>Object.assign({},x)),n=Math.min(5,Math.max(1,o.length+d));if(n===o.length)return;
-  if(ST.game.stacks.some(x=>x!==START)&&!confirm('改變人數會讓所有人的籌碼回到 200，確定嗎？'))return;
+  if(ST.game.stacks.some(x=>x!==START)&&!confirm(`改變人數會讓所有人的籌碼回到 ${START}，確定嗎？`))return;
   if(n>o.length){const used=o.map(x=>x.n),nx=OPP0.find(x=>!used.includes(x.n));o.push(nx?Object.assign({},nx):{n:`電腦${n}`,s:'bal'})}else o.pop();
   ST.game.opp=o;ST.game.stacks=Array(n+1).fill(START);ST.game.btn=-1;save();render();
 }
@@ -433,11 +436,11 @@ function rPlay(){
   if(G.phase==='idle'){
     const ol=oppList();
     let h=`<h1>牌局</h1><p class="sub">跟 ${ol.length} 位電腦對手打完整的一手，教練在你每次行動前給建議</p>
-    <p class="muted" style="margin:0">每人 200 籌碼，盲注 1／2。籌碼會延續到下一手，莊家每手往左移一位。</p>
+    <p class="muted" style="margin:0">每人 ${START} 籌碼，盲注 ${SBV}／${BBV}，所有下注都以 ${U} 為單位。籌碼會延續到下一手，莊家每手往左移一位。</p>
     <div class="row" style="margin-top:14px"><span>對手人數<span class="muted">　共 ${ol.length+1} 人一桌</span></span><div class="stepper"><button onclick="gOppN(-1)" aria-label="減少對手" ${ol.length<=1?'disabled':''}>−</button><span>${ol.length}</span><button onclick="gOppN(1)" aria-label="增加對手" ${ol.length>=5?'disabled':''}>+</button></div></div>
     <div class="lbl">對手的名字和打法</div>
     ${ol.map((o,i)=>{const t=BSTY[o.s]||BSTY.bal;return `<div class="opp"><input value="${esc(o.n)}" maxlength="6" onchange="gOppName(${i},this.value)" aria-label="第 ${i+1} 位對手的名字"><select onchange="gOppSty(${i},this.value)" aria-label="第 ${i+1} 位對手的打法">${Object.keys(BSTY).map(k=>`<option value="${k}" ${k===o.s?'selected':''}>${BSTY[k].style}</option>`).join('')}</select><div class="muted">${t.d}<br><span style="font-size:12px">撲克術語：${t.term}</span></div></div>`}).join('')}
-    <p class="cap" style="margin-top:6px">改人數會讓所有人的籌碼回到 200；改名字、打法不影響籌碼。人少時每個人玩的牌會變多，後位的範圍也更寬。</p>
+    <p class="cap" style="margin-top:6px">改人數會讓所有人的籌碼回到 ${START}；改名字、打法不影響籌碼。人少時每個人玩的牌會變多，後位的範圍也更寬。</p>
     <div class="lbl">教練建議</div>
     <div class="seg"><button class="${gs.hint==='auto'?'on':''}" onclick="gHint('auto')">直接顯示</button><button class="${gs.hint!=='auto'?'on':''}" onclick="gHint('tap')">我先想，再點開看</button></div>
     <div class="lbl">勝率條（輪到你時，用長條看勝率夠不夠）</div>
@@ -445,7 +448,7 @@ function rPlay(){
     <div class="lbl">速算練習（翻牌後輪到你時，練算 outs 和底池賠率）</div>
     <div class="seg"><button class="${gs.calc!==false?'on':''}" onclick="gCalc(true)">顯示</button><button class="${gs.calc===false?'on':''}" onclick="gCalc(false)">不顯示</button></div>
     <div class="row" style="margin-top:16px"><span>你的籌碼</span><span class="big-n" style="font-size:30px">${gs.stacks[0]}</span></div>`;
-    h+=gs.stacks[0]<BBV?`<p class="err">籌碼輸光了，重新買入就能繼續。</p><button class="pri full" onclick="gRebuy()">重新買入 200 籌碼</button>`:`<button class="pri full" style="margin-top:12px" onclick="gStart()">發牌</button>`;
+    h+=gs.stacks[0]<BBV?`<p class="err">籌碼輸光了，重新買入就能繼續。</p><button class="pri full" onclick="gRebuy()">重新買入 ${START} 籌碼</button>`:`<button class="pri full" style="margin-top:12px" onclick="gStart()">發牌</button>`;
     if(ST.play.hands)h+=`<button class="full" style="margin-top:8px" onclick="gReset()">籌碼歸位，重新開始</button>`;
     M.innerHTML=h;return;
   }
@@ -472,7 +475,7 @@ function rPlay(){
     if(G.raiseOpen&&canR){
       const R=raiseOpts();
       h+=`<div class="rp"><div class="grid4">${R.o.map(([n,v])=>`<button onclick="setRT(${v})">${n}</button>`).join('')}</div>
-      ${R.max>R.min?`<input id="rsl" type="range" min="${R.min}" max="${R.max}" step="1" value="${G.raiseTo}" oninput="setRT(this.value)" aria-label="加注金額">`:''}
+      ${R.max>R.min?`<input id="rsl" type="range" min="${R.min}" max="${R.max}" step="${U}" value="${G.raiseTo}" oninput="setRT(this.value)" aria-label="加注金額">`:''}
       <button class="pri full" onclick="uAct('raise')">${G.curBet?'加注到':'下注'} <span id="rto">${G.raiseTo}</span></button></div>`;
     }
     const H=G.hint;
@@ -493,7 +496,7 @@ function rPlay(){
     const n=G.net;
     h+=`<div class="fb ${n>0?'ok':n<0?'bad':''}"><div class="res ${n>0?'ok-t':n<0?'bad-t':''}">${n>0?'+'+n:n===0?'±0':n}</div><div class="muted">${n>0?'這手你贏了':n<0?'這手你輸了':'這手打平'}，籌碼 ${me.start} → ${me.stack}</div></div>
     <button class="pri full" onclick="gStart()" ${me.stack<BBV?'disabled':''}>下一手</button>
-    ${me.stack<BBV?'<button class="full" onclick="gRebuy();gStart()">重新買入 200 籌碼，再來一手</button>':''}
+    ${me.stack<BBV?`<button class="full" onclick="gRebuy();gStart()">重新買入 ${START} 籌碼，再來一手</button>`:''}
     <div class="lbl" style="margin-top:18px">復盤：所有人的手牌</div>
     ${G.P.map(p=>`<div class="rv"><span class="n">${p.name}<br><span class="muted" style="font-size:12px">${posOf(p.i)}</span></span><div class="cards mini">${p.hole.map(c=>cardH(c)).join('')}</div><span class="h">${p.folded?`${STN[p.foldSt]}蓋牌`:G.board.length===5?handName(ev([...p.hole,...G.board])):'沒到攤牌'}${G.pots.some(x=>x.w.includes(p.i))?'　<span class="ok-t">贏</span>':''}</span></div>`).join('')}
     <div class="lbl" style="margin-top:18px">你的決定</div>

@@ -59,7 +59,7 @@ function newOQ(){
   const exact=Math.round((turn?n/46:allin?1-(47-n)*(46-n)/(47*46):n/47)*1000)/10;
   let P,B,need;
   for(let k=0;k<50;k++){
-    P=(2+rnd(9))*10;B=Math.max(2,Math.round(P*[1/3,1/2,2/3,1,1.5][rnd(5)]));need=Math.round(B/(P+2*B)*100);
+    P=(2+rnd(9))*100;B=Math.max(BBV,r10(P*[1/3,1/2,2/3,1,1.5][rnd(5)]));need=Math.round(B/(P+2*B)*100);
     if(Math.abs(est-need)>=4)break;
   }
   // 第 2 步的選項：正確答案加上常見錯誤
