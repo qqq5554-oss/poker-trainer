@@ -441,7 +441,7 @@ function rPlay(){
   if(my){
     const call=G.curBet-me.bet,cc=Math.min(call,me.stack),canR=me.stack>call;
     h+=`<div class="need">${call>0?`前面最高下到 <b>${G.curBet}</b>，你要補 <b>${cc}</b> 才能繼續`:'目前沒人下注，可以免費過牌'}</div>
-    ${eqBar()}<div class="grid3"><button onclick="uAct('fold')">蓋牌</button>
+    <div class="grid3"><button onclick="uAct('fold')">蓋牌</button>
     <button onclick="uAct('${call>0?'call':'check'}')">${call>0?(me.stack<=call?`全下跟注 ${cc}`:`跟注 ${cc}`):'過牌'}</button>
     ${canR?`<button class="${G.raiseOpen?'right':''}" onclick="G.raiseOpen=!G.raiseOpen;render()">${G.curBet?'加注…':'下注…'}</button>`:'<button disabled style="opacity:.35">加注</button>'}</div>`;
     if(G.raiseOpen&&canR){
@@ -451,7 +451,7 @@ function rPlay(){
       <button class="pri full" onclick="uAct('raise')">${G.curBet?'加注到':'下注'} <span id="rto">${G.raiseTo}</span></button></div>`;
     }
     const H=G.hint;
-    h+=calcPanel();
+    h+=eqBar()+calcPanel();
     if(G.hintOpen)h+=`<div class="fb coach"><b>教練建議：${H.title}</b><div><span class="dir ${H.dir.k}">${H.dir.t}</span></div><div>${H.why}</div>
     <div class="ch">局勢</div><ul>${H.sit.map(x=>`<li>${x}</li>`).join('')}</ul>
     ${H.xp&&H.xp.length?`<div class="ch">專家分析</div><ul class="xp">${H.xp.map(x=>`<li><b>${x.t}</b>　${x.h}</li>`).join('')}</ul>`:''}
