@@ -5,6 +5,7 @@
   - 沒有負籌碼、每手都能正常結束（不會卡住）
   - 教練建議每個欄位都有內容，沒有 undefined、NaN 之類的錯字
   - 牌局中的速算練習每題都有正確答案，作答完會出現結論
+  - 每次教練建議都有專家分析；推算的對手範圍合理（緊的玩家加注後 AA 遠比 72s 可能），推算勝率夠快
   - 每手都有記到牌局紀錄，「紀錄 → 牌局分析」能正常顯示
   - Outs 練習出 1000 題：outs 數和逐張檢查一致、每步選項有正確答案、說明沒有錯字
   - 頁面沒有 JavaScript 錯誤
@@ -37,7 +38,7 @@ async (hands) => {
   const sum = a => a.reduce((x, y) => x + y, 0);
   ST.game.stacks = [200, 200, 200, 200, 200, 200]; ST.game.btn = -1; save();
   go('play');
-  let qzSeen = 0, osSeen = 0, coachSeen = 0, played = 0, rebuys = 0, showdowns = 0, splits = 0, sidePots = 0, idle = 0;
+  let rangeMs = 0, qzSeen = 0, osSeen = 0, coachSeen = 0, played = 0, rebuys = 0, showdowns = 0, splits = 0, sidePots = 0, idle = 0;
   while (played < hands) {
     if (ST.game.stacks[0] < BBV) { gRebuy(); rebuys++; }
     gStart();
@@ -58,7 +59,9 @@ async (hands) => {
           if (G.qz.Q.length && !cp.includes('class="qr"')) { errs.push(`第 ${G.no} 手速算練習作答完沒有結論`); break; }
           qzSeen++;
         }
-        const h = G.hint, txt = [h.title, h.why, h.next, h.dir && h.dir.t, ...(h.sit || []), ...h.info, outsGame(h), cp].join('|');
+        const h = G.hint, txt = [h.title, h.why, h.next, h.dir && h.dir.t, ...(h.sit || []), ...h.info, outsGame(h), cp, ...(h.xp || []).map(x => x.t + x.h)].join('|');
+        if (!h.xp || !h.xp.length) { errs.push(`第 ${G.no} 手教練沒有專家分析`); break; }
+        if (h.eq != null && !(h.eq >= 0 && h.eq <= 100)) { errs.push(`第 ${G.no} 手推算勝率不合理：${h.eq}`); break; }
         if (h.os) {
           const dr = drawInfo(G.P[0].hole, G.board);
           if (!dr || dr.o !== h.os.n) { errs.push(`第 ${G.no} 手教練的 outs ${h.os.n} 和 drawInfo ${dr && dr.o} 不一致`); break; }
@@ -116,6 +119,21 @@ async (hands) => {
   // Outs 練習：題目的 outs 數和逐張暴力檢查一致，每一步的選項有正確答案、說明沒有錯字
   const kinds = {};
   if (!errs.length) {
+    // 對手範圍：阿明（緊）在前位加注後，AA 的可能性要遠高於 72s；教練一次思考要夠快
+    {
+      gStart(); const i = 1, W = G.R[i], idx = (a, b) => CB.findIndex(([x, y]) => x === Math.min(a, b) && y === Math.max(a, b));
+      G.cur = -1; clearTimeout(G.timer);
+      rangeUpd(i, 'raise');
+      const aa = W[idx(48, 49)], s72 = W[idx(20, 0)];
+      if (!(aa > s72 * 10)) errs.push(`範圍推算不合理：阿明加注後 AA 權重 ${aa}，72s 權重 ${s72}`);
+      const t0 = performance.now(); for (let k = 0; k < 5; k++) eqRange(1500); const ms = (performance.now() - t0) / 5;
+      if (ms > 400) errs.push(`推算勝率太慢：一次 ${Math.round(ms)} 毫秒`);
+      rangeMs = Math.round(ms);
+      // 公共牌有一對（7♠ 7♦ K♣ 2♥ 9♣）、範圍全部一樣時：用手牌配成兩對的牌要算在中間那一類，不是強牌
+      G.board = [20, 22, 47, 1, 31]; G.street = 3; G.R[1].fill(1); G.P[0].hole = [0, 4];
+      const B = rangeView(1).B;
+      if (!(B[1] > 20 && B[0] < 20)) errs.push(`公共牌有一對時範圍分類不合理：${B}`);
+    }
     go('eq'); EQM = 'outs';
     // 固定題：使用者回報的牌。手牌 7♥ 8♥，公共牌 10♠ A♠ Q♥ K♥。
     // 任何 J 都讓公共牌自己成順子（不算），但 J♥ 讓你成同花（要算），所以是 13 − 4 = 9 張
@@ -155,7 +173,7 @@ async (hands) => {
     }
     go('play');
   }
-  return {qzSeen, osSeen, kinds, coachSeen, played, rebuys, showdowns, splits, sidePots, errs, stacks: ST.game.stacks, stats: ST.play};
+  return {rangeMs, qzSeen, osSeen, kinds, coachSeen, played, rebuys, showdowns, splits, sidePots, errs, stacks: ST.game.stacks, stats: ST.play};
 }
 """
 
@@ -191,6 +209,7 @@ def main():
     print(f"打了 {res['played']} 手：攤牌 {res['showdowns']}、有邊池 {res['sidePots']}、"
           f"平分 {res['splits']}、你重新買入 {res['rebuys']} 次、檢查教練建議 {res['coachSeen']} 次")
     print(f"牌局中遇到聽牌、檢查 Outs 計算 {res['osSeen']} 次；速算練習出現 {res['qzSeen']} 次")
+    print(f"推算對手範圍的勝率（1500 次模擬）一次約 {res['rangeMs']} 毫秒")
     print(f"Outs 練習出了 {sum(res['kinds'].values())} 題：{res['kinds']}")
     print(f"最後籌碼：{res['stacks']}")
     errs = res["errs"] + [f"JS 錯誤：{e}" for e in page_errs]

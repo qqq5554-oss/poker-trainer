@@ -9,7 +9,7 @@ const BOTS=[
  {name:'小美',style:'鬆凶',d:'什麼牌都想玩，常加注、也常虛張聲勢',loose:2,aggr:.8,bluff:.2,cadj:-.02,wild:true,
   pre:'加注的是小美，小美什麼牌都愛加注，加注不代表牌好',bet:'下注的是小美，小美常虛張聲勢，下注的牌可能很普通，中等的牌可以多跟一點',tip:'別對小美虛張聲勢，小美不愛蓋牌；有好牌就讓小美自己下注'},
  {name:'老王',style:'跟注站',d:'幾乎都跟注，很少加注也很少蓋牌',loose:3,aggr:.12,bluff:.02,cadj:-.14,honest:true,station:true,
-  pre:'加注的是老王，他很少加注，這次很可能是大牌',bet:'下注的是老王，他幾乎只會跟注，主動下注通常是真的有牌',tip:'老王什麼都跟：有好牌就多下注讓他付錢，沒牌千萬別虛張聲勢'},
+  pre:'加注的是老王，他很少加注，但他玩的牌很多，加注時牌不一定很大，通常至少是還不錯的牌',bet:'下注的是老王，他幾乎只會跟注，主動下注通常是真的有牌',tip:'老王什麼都跟：有好牌就多下注讓他付錢，沒牌千萬別虛張聲勢'},
  {name:'阿華',style:'緊弱',d:'很保守，他一下注通常就是大牌',loose:-1.5,aggr:.25,bluff:.02,cadj:.08,honest:true,bluffable:true,
   pre:'加注的是阿華，他很保守，加注通常是大牌',bet:'下注的是阿華，他很少下注，一下注通常就是大牌，中等的牌就放棄吧',tip:'阿華很容易被嚇跑，你下注常常就能讓他蓋牌'},
  {name:'小芳',style:'平衡',d:'打法中規中矩',loose:0,aggr:.5,bluff:.1,cadj:0,bluffable:true,
@@ -73,6 +73,7 @@ function gStart(){
     if(i>0&&s<BBV){s=START;lg(`${BOTS[i-1].name} 輸光了，重新買入 ${START} 籌碼。`,'sys')}
     G.P.push({i,name:i?BOTS[i-1].name:'你',bot:i?BOTS[i-1]:null,stack:s,start:s,hole:[],bet:0,total:0,folded:false,allin:false,acted:false,last:'',show:i===0});
   }
+  rangeInit();G.lb=null;
   G.deck=deal(52);
   for(let r=0;r<2;r++)for(let k=1;k<=6;k++)G.P[(G.btn+k)%6].hole.push(G.deck.pop());
   G.no=ST.play.hands+1;
@@ -103,12 +104,13 @@ function doAct(i,type,to){
   if(type==='raise'&&p.stack<=call)type='call';
   if(type==='check'&&call>0)type='call';
   if(type==='call'&&call===0)type='check';
+  if(i>0)rangeUpd(i,type);
   if(type==='fold'){p.folded=true;p.foldSt=G.street;txt='蓋牌'}
   else if(type==='check')txt='過牌';
   else if(type==='call'){const x=put(i,call);txt=p.allin?`全下跟注 ${x}`:`跟注 ${x}`}
   else{
     const max=p.bet+p.stack;to=Math.min(Math.max(Math.round(to),G.curBet+G.lastRaise),max);
-    const was=G.curBet;put(i,to-p.bet);
+    const was=G.curBet,pb=potT(),x=to-p.bet;put(i,x);G.lb={i,st:G.street,x,pb};
     if(to-was>=G.lastRaise)G.lastRaise=to-was;
     G.curBet=Math.max(was,to);G.ag[G.street]=i;
     G.P.forEach(q=>{if(q!==p&&canAct(q))q.acted=false});
@@ -261,7 +263,12 @@ function coach(){
     if(behind>=3)sit.push(`後面還有 ${behind} 人沒行動，任何一人都可能拿到大牌`);
     const bbs=Math.floor(p.stack/BBV);
     if(bbs<=15)sit.push(`你的籌碼只剩 ${bbs} 個大盲，好牌可以直接全下，不用分好幾次下注`);
-    const R=(o)=>Object.assign({sit,info},o);
+    const xp=[],n1=opps.length;
+    if(raised&&ager){const rv=rangeView(ager.i);xp.push({t:'對手範圍',h:`依${ager.name}的打法和位置，會這樣加注的牌大約是所有起手牌的前 ${rv.pct}%，${rv.low.length?`從 ${rv.top.map(dl).join('、')} 這種大牌，到 ${rv.low.map(dl).join('、')} 這種普通的牌都有可能`:`大多是 ${rv.top.map(dl).join('、')} 這類強牌`}。`})}
+    const er=Math.round(eqRange(1000)*100),fair=Math.round(100/(n1+1));
+    xp.push({t:'實際勝率',h:`${dl(l)} 對上還沒蓋牌的 ${n1} 位對手${raised?'（已經算進加注者的牌比較強）':''}，打到最後的勝率約 ${er}%。${n1+1} 個人平分的話每人是 ${fair}%，${er>=fair*1.3?'你明顯比平均好。':er>=fair*.9?'和平均差不多。':'比平均差。'}${t===0&&er>=fair*.9?`不過勝率不是全部：${dl(l)} 中了對子也常輸給踢腳更大的同類牌，翻牌後${late?'':'又沒位置，'}很難打，新手照起手牌表蓋掉比較穩。`:''}`});
+    if(!raised&&behind)xp.push({t:'後面的人',h:`後面還有 ${behind} 人沒行動，其中有人拿到 AA、KK、QQ、JJ、AK 這類頂級牌的機率約 ${Math.round((1-Math.pow(1-44/1326,behind))*100)}%。後面的人越多，越要小心。`});
+    const R=(o)=>Object.assign({sit,info,xp},o);
     if(!raised){
       const to=cap(3*BBV+BBV*lp);
       if(t===1||t===2||(t===3&&late))return R({cat:'a',ok:['a'],to,title:`加注到 ${to}`,dir:A('積極：加注入池'),why:`${dl(l)} 屬於「${TN[t]}」${t===3?'，而你在後位，可以玩':''}。好牌要主動加注入池：逼走弱牌，讓底池裡的人變少，比只跟注更容易贏。${lp?`前面有 ${lp} 人只跟注，所以每多一人多加 1 個大盲。`:''}`,next:'翻牌後如果中了對子以上或強聽牌，繼續下注；沒中而對手下注，大多可以放棄。'});
@@ -281,11 +288,11 @@ function coach(){
     return R({cat:'f',ok:['f'],title:'蓋牌',dir:C('保守：蓋牌'),why:`有人加注通常代表牌不錯。${dl(l)} 跟進去很容易被壓制，蓋牌。`,next:'蓋牌後看看對手最後亮什麼牌，下次更好判斷。'});
   }
   const dr=drawInfo(p.hole,G.board),tex=boardTex(G.board),rd=handRead(p.hole,G.board);
-  const eq=eqMC(p.hole,G.board,opp,1500),e=Math.round(eq*100);
+  const eq=eqRange(1500),e=Math.round(eq*100),eRand=Math.round(eqMC(p.hole,G.board,opp,800)*100);
   const info=[`目前牌型：${handName(ev([...p.hole,...G.board]))}`];
   if(dr)info.push(`聽牌：差一張成${dr.kind}，有 ${dr.o} 張 outs，中的機率約 ${dr.p}%（${dr.rule}）`);
-  info.push(`勝率：約 ${e}%（對 ${opp} 位還沒蓋牌的對手）`);
-  const ft='勝率是假設對手拿隨機手牌算的。對手下注越大，實際牌力通常越強，可以再保守一點。';
+  info.push(`勝率：約 ${e}%（依 ${opp} 位對手的打法和動作，推算他們可能拿的牌）`);
+  const ft='勝率是依每位對手的打法和這手的動作推算他可能拿的牌再模擬出來的。推算不一定完全準，但比把對手當成隨機牌更接近實際。';
   sit.push(rd.t,...tex.n.slice(0,2));
   if(opp===1)sit.push(`只剩${opps[0].name}一位對手，單挑時可以打得積極一點${call>0?'':'。'+opps[0].bot.tip}`);
   else if(opp>=3)sit.push(`還有 ${opp} 位對手，總有人中牌的機會很高，虛張聲勢很難成功，要靠真的有牌`);
@@ -308,7 +315,31 @@ function coach(){
       exact:Math.round((turn?n/46:mult===4?1-(47-n)*(46-n)/(47*46):n/47)*1000)/10,need:call>0?Math.round(call/(pot+call)*100):null});
     const k=info.findIndex(x=>x.startsWith('聽牌：'));if(k>=0)info.splice(k,1);
   }
-  const R=(o)=>Object.assign({sit,info,ft,os,eq:e},o);
+  const xp=[],pf=G.ag[0],tgt=call>0&&ager?ager:opp===1?opps[0]:(pf>0&&!G.P[pf].folded?G.P[pf]:null);
+  if(tgt){const rv=rangeView(tgt.i),B=rv.B;xp.push({t:'對手範圍',h:`依${tgt.name}的打法和這手到目前的動作推算，可能的牌：強牌（${rv.paired?'三條以上':'兩對以上'}）${B[0]}%、${rv.paired?'兩對（一對在公共牌上）':'一對'} ${B[1]}%、${G.street<3?`聽牌 ${B[2]}%、`:''}沒中 ${B[3]}%。`})}
+  xp.push({t:'實際勝率',h:`對上對手可能拿的牌，你的勝率約 ${e}%；如果把對手當成隨機牌是 ${eRand}%。${e<eRand-5?'對手的動作代表牌比隨機強，實際勝率比較低。':e>eRand+5?'對手的動作顯示牌偏弱，實際勝率比較高。':'兩種算法差不多。'}`});
+  if(call>0){
+    const evc=Math.round((eq*(pot+call)-call)*10)/10;
+    xp.push({t:'期望值',h:`跟注 ${call}，長期平均每次${evc>=0?'賺':'賠'} ${Math.abs(evc)} 籌碼（勝率 ${e}% × 跟注後底池 ${pot+call} − 跟注 ${call}）。${evc>=0?'期望值是正的：就算這次輸了，同樣的情況打很多次，長期是賺的。':'期望值是負的：就算這次碰巧贏了，同樣的情況打很多次，長期是虧的。'}`});
+    if(G.lb&&G.lb.st===G.street&&G.lb.i===agI&&ager&&G.lb.pb>0){
+      const f=G.lb.x/G.lb.pb,be=Math.round(G.lb.x/(G.lb.pb+G.lb.x)*100);
+      xp.push({t:'下注大小',h:`${ager.name}下了底池的 ${Math.round(f*100)}%。${f<.4?'小注通常是中等的牌想便宜看下一張，或是用小代價試探你。':f<=.8?'中等大小的下注，強牌和聽牌都常這樣下。':'大注通常是「兩極化」：要嘛很強，要嘛是詐唬，中等的牌很少下這麼大。'}`});
+      xp.push({t:'對手的算盤',h:`這個下注只要你蓋牌的機會超過 ${be}%，${ager.name}就算拿爛牌詐唬也有賺。所以面對這種下注不能一律蓋牌，不然會被詐唬吃定。${eq<call/(pot+call)?'不過你這手牌太弱，蓋掉沒關係，要跟就用比較好的牌來跟。':'你這手牌夠好，正是該跟的那種牌。'}`});
+    }
+  }
+  if(os&&call>0&&os.est<os.need&&G.street<3){
+    const hp=os.n/(G.street===1?47:46),W=Math.max(0,Math.ceil(call/hp-(pot+call)));
+    xp.push({t:'隱含賠率',h:`只看現在的底池，聽牌不夠划算。但如果中牌後還能從對手身上多贏 ${W} 籌碼以上，跟注就划算。${ager?`${ager.name}還有 ${ager.stack} 籌碼，${W>ager.stack?'就算全贏過來也不夠，應該蓋牌。':ager.bot.station?'他什麼都跟，中了比較容易拿到。':ager.bot.honest?'他很保守，你中了牌他可能就不付錢了。':'要看你中了之後他會不會付錢。'}`:''}`});
+  }
+  if(/踢腳偏小|只用到一張不大的手牌/.test(rd.t))xp.push({t:'反向隱含賠率',h:'你的牌看起來不錯，但遇到更大的同類牌時會輸很多（例如踢腳比人小、同花比人小）。被大注跟注或加注時要特別小心。'});
+  const bsc=[0,0,0,0];G.board.forEach(c=>bsc[c&3]++);const fsu=bsc.findIndex(x=>x>=3);
+  if(fsu>=0&&catOf(ev([...p.hole,...G.board]))<5){const bl=p.hole.filter(c=>(c&3)===fsu&&(c>>2)>=11);if(bl.length)xp.push({t:'阻擋牌',h:`公共牌有 ${bsc[fsu]} 張 ${SU[fsu]}，你手上有 ${bl.map(cn).join('、')}，對手就不可能有${bl.some(c=>c>>2===12)?'最大的 A 同花':'K 大的同花'}。這叫「阻擋牌」，你下注詐唬時會比較有說服力。`})}
+  if(G.street===1&&pf>=0&&!G.P[pf].folded){
+    const hi=Math.max(...G.board.map(c=>c>>2)),who=pf===0?'你':G.P[pf].name;
+    if(hi>=10&&!tex.wet)xp.push({t:'牌面對誰有利',h:`公共牌有大牌又不連，對翻牌前加注的${who}有利：加注的人手上大牌比較多，比較容易中。${pf===0?'你可以多下注施壓。':'他下注時不一定有牌，但常常有。'}`});
+    else if(hi<=7&&tex.wet)xp.push({t:'牌面對誰有利',h:`公共牌又小又連，對只跟注的人比較有利（小對子、同花連張常常跟注）。${pf===0?'你翻牌前加注、手上多半是大牌，這種牌面不一定中，要小心。':`${who}翻牌前加注，這種牌面不一定有中。`}`});
+  }
+  const R=(o)=>Object.assign({sit,info,ft,os,eq:e,xp},o);
   if(call===0){
     if(eq>=.6){
       let f=2/3,w2='下注約底池的 2/3，讓比你差的牌付錢，也讓聽牌的人不能免費看下一張。';
@@ -330,13 +361,10 @@ function coach(){
   }
   const po=call/(pot+call),pp=Math.round(po*100);
   info.push(`底池賠率：跟注 ${call} ÷（底池 ${pot} + ${call}）＝ ${pp}%，勝率要高於這個才划算`);
-  const tight=ager&&ager.bot.honest,wild=ager&&ager.bot.wild;
   if(eq>=.7){const to=cap(G.curBet+Math.max(G.lastRaise,(pot+call)*.75));return R({cat:'a',ok:['a','p'],to,title:`加注到 ${to}`,dir:A('積極：加注'),why:`勝率約 ${e}%，遠高於需要的 ${pp}%。加注讓底池變大，從比你差的牌身上多贏一點。`,next:'對手再加注回來的話，代表牌非常強，要想清楚再繼續。'})}
   if(eq>=po){
-    if(tight&&eq-po<.12&&rd.c<=1)return R({cat:'p',ok:['p','f'],title:`跟注 ${call}，或蓋牌`,dir:C('保守：小心'),why:`勝率約 ${e}%，數字上剛好夠跟注（需要 ${pp}%）。但${ager.name}很少虛張聲勢，實際牌力通常比隨機手牌強很多，蓋牌也是合理的選擇。`,next:'如果跟了，下一條街對方再下注，只有一對就放棄。'});
     return R({cat:'p',ok:eq>=.55?['p','a']:['p'],title:`跟注 ${call}`,dir:Md('穩健：跟注看牌'),why:`勝率約 ${e}%，高於需要的 ${pp}%，長期來看跟注划算。${eq-po<.08?'不過差距不大，對手下注通常代表牌不差。':''}`,next:G.street===3?'跟注後就攤牌比大小了。':'下一張對你有幫助就可以主動一點；沒幫助而對手繼續下大注，要考慮放棄。'});
   }
-  if(wild&&po-eq<.08&&rd.c>=1)return R({cat:'f',ok:['f','p'],title:'蓋牌，或跟注抓詐唬',dir:Md('穩健：可以抓詐唬'),why:`勝率約 ${e}%，比需要的 ${pp}% 少一點。不過${ager.name}常常虛張聲勢，你已經有${handName(ev([...p.hole,...G.board]))}，跟注「抓詐唬」也說得過去。`,next:'抓詐唬只適合對付常虛張聲勢的人；對老王、阿華這種很少詐唬的人不要這樣做。'});
   return R({cat:'f',ok:['f'],title:'蓋牌',dir:C('保守：放棄這手'),why:`勝率約 ${e}%，低於需要的 ${pp}%，長期跟注會虧。${dr?'就算算上聽牌也不夠划算。':''}`,next:'蓋牌不丟臉，省下的籌碼就是賺到的。'});
 }
 function raiseOpts(){
@@ -421,6 +449,7 @@ function rPlay(){
     h+=calcPanel();
     if(G.hintOpen)h+=`<div class="fb coach"><b>教練建議：${H.title}</b><div><span class="dir ${H.dir.k}">${H.dir.t}</span></div><div>${H.why}</div>
     <div class="ch">局勢</div><ul>${H.sit.map(x=>`<li>${x}</li>`).join('')}</ul>
+    ${H.xp&&H.xp.length?`<div class="ch">專家分析</div><ul class="xp">${H.xp.map(x=>`<li><b>${x.t}</b>　${x.h}</li>`).join('')}</ul>`:''}
     <div class="ch">接下來</div><div class="nx">${H.next}</div>${ST.game.calc===false?outsGame(H):''}
     <div class="ch">數字</div><ul>${H.info.map(x=>`<li>${x}</li>`).join('')}</ul>${H.ft?`<div class="ft">${H.ft}</div>`:''}</div>`;
     else h+=`<button class="full" style="margin-top:10px" onclick="G.hintOpen=true;render()">看教練建議</button>`;
