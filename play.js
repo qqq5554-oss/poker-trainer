@@ -4,15 +4,15 @@ const POSZ={BTN:'莊家',SB:'小盲',BB:'大盲',UTG:'前位',HJ:'中位',CO:'�
 const STN=['翻牌前','翻牌','轉牌','河牌','攤牌'];
 // 電腦對手的 5 種打法；說明文字用名字，不用代名詞（名字可以自己改）
 const BSTY={
- tag:{style:'緊凶',d:'牌好才玩，一玩就下重注',loose:-1,aggr:.75,bluff:.08,cadj:.05,bluffable:true,
+ tag:{style:'精明果斷',term:'緊凶',d:'牌好才玩，一玩就下重注',loose:-1,aggr:.75,bluff:.08,cadj:.05,bluffable:true,
   pre:n=>`加注的是${n}，${n}牌好才玩，加注通常代表牌不錯`,bet:n=>`下注的是${n}，有好牌或強聽牌都會下注，要尊重，但不一定是最大牌`,tip:n=>`${n}沒中牌時會蓋牌，你主動下注有機會讓對方放棄`},
- lag:{style:'鬆凶',d:'什麼牌都想玩，常加注、也常虛張聲勢',loose:2,aggr:.8,bluff:.2,cadj:-.02,wild:true,
+ lag:{style:'衝動愛冒險',term:'鬆凶',d:'什麼牌都想玩，常加注、也常虛張聲勢',loose:2,aggr:.8,bluff:.2,cadj:-.02,wild:true,
   pre:n=>`加注的是${n}，${n}什麼牌都愛加注，加注不代表牌好`,bet:n=>`下注的是${n}，${n}常虛張聲勢，下注的牌可能很普通，中等的牌可以多跟一點`,tip:n=>`別對${n}虛張聲勢，${n}不愛蓋牌；有好牌就讓${n}自己下注`},
- sta:{style:'跟注站',d:'幾乎都跟注，很少加注也很少蓋牌',loose:3,aggr:.12,bluff:.02,cadj:-.14,honest:true,station:true,
+ sta:{style:'好奇不服輸',term:'跟注站',d:'總想看最後一張牌，幾乎都跟注，很少加注也很少蓋牌',loose:3,aggr:.12,bluff:.02,cadj:-.14,honest:true,station:true,
   pre:n=>`加注的是${n}，${n}很少加注，但玩的牌很多，加注時牌不一定很大，通常至少是還不錯的牌`,bet:n=>`下注的是${n}，${n}幾乎只會跟注，主動下注通常是真的有牌`,tip:n=>`${n}什麼都跟：有好牌就多下注讓對方付錢，沒牌千萬別虛張聲勢`},
- nit:{style:'緊弱',d:'很保守，一下注通常就是大牌',loose:-1.5,aggr:.25,bluff:.02,cadj:.08,honest:true,bluffable:true,
+ nit:{style:'膽小謹慎',term:'緊弱',d:'很保守、怕輸，一下注通常就是大牌',loose:-1.5,aggr:.25,bluff:.02,cadj:.08,honest:true,bluffable:true,
   pre:n=>`加注的是${n}，${n}很保守，加注通常是大牌`,bet:n=>`下注的是${n}，${n}很少下注，一下注通常就是大牌，中等的牌就放棄吧`,tip:n=>`${n}很容易被嚇跑，你下注常常就能讓對方蓋牌`},
- bal:{style:'平衡',d:'打法中規中矩',loose:0,aggr:.5,bluff:.1,cadj:0,bluffable:true,
+ bal:{style:'冷靜理性',term:'平衡',d:'打法中規中矩，看情況做決定',loose:0,aggr:.5,bluff:.1,cadj:0,bluffable:true,
   pre:n=>`加注的是${n}，${n}打法中規中矩，照起手牌表判斷就好`,bet:n=>`下注的是${n}，${n}打法平衡，照勝率和底池賠率判斷就好`,tip:n=>`${n}打法平衡，用正常打法應對就好`}
 };
 const OPP0=[{n:'阿明',s:'tag'},{n:'小美',s:'lag'},{n:'老王',s:'sta'},{n:'阿華',s:'nit'},{n:'小芳',s:'bal'}];
@@ -436,7 +436,7 @@ function rPlay(){
     <p class="muted" style="margin:0">每人 200 籌碼，盲注 1／2。籌碼會延續到下一手，莊家每手往左移一位。</p>
     <div class="row" style="margin-top:14px"><span>對手人數<span class="muted">　共 ${ol.length+1} 人一桌</span></span><div class="stepper"><button onclick="gOppN(-1)" aria-label="減少對手" ${ol.length<=1?'disabled':''}>−</button><span>${ol.length}</span><button onclick="gOppN(1)" aria-label="增加對手" ${ol.length>=5?'disabled':''}>+</button></div></div>
     <div class="lbl">對手的名字和打法</div>
-    ${ol.map((o,i)=>{const t=BSTY[o.s]||BSTY.bal;return `<div class="opp"><input value="${esc(o.n)}" maxlength="6" onchange="gOppName(${i},this.value)" aria-label="第 ${i+1} 位對手的名字"><select onchange="gOppSty(${i},this.value)" aria-label="第 ${i+1} 位對手的打法">${Object.keys(BSTY).map(k=>`<option value="${k}" ${k===o.s?'selected':''}>${BSTY[k].style}</option>`).join('')}</select><div class="muted">${t.d}</div></div>`}).join('')}
+    ${ol.map((o,i)=>{const t=BSTY[o.s]||BSTY.bal;return `<div class="opp"><input value="${esc(o.n)}" maxlength="6" onchange="gOppName(${i},this.value)" aria-label="第 ${i+1} 位對手的名字"><select onchange="gOppSty(${i},this.value)" aria-label="第 ${i+1} 位對手的打法">${Object.keys(BSTY).map(k=>`<option value="${k}" ${k===o.s?'selected':''}>${BSTY[k].style}</option>`).join('')}</select><div class="muted">${t.d}<br><span style="font-size:12px">撲克術語：${t.term}</span></div></div>`}).join('')}
     <p class="cap" style="margin-top:6px">改人數會讓所有人的籌碼回到 200；改名字、打法不影響籌碼。人少時每個人玩的牌會變多，後位的範圍也更寬。</p>
     <div class="lbl">教練建議</div>
     <div class="seg"><button class="${gs.hint==='auto'?'on':''}" onclick="gHint('auto')">直接顯示</button><button class="${gs.hint!=='auto'?'on':''}" onclick="gHint('tap')">我先想，再點開看</button></div>
