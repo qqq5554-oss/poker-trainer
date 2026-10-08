@@ -5,6 +5,7 @@
   - 沒有負籌碼、每手都能正常結束（不會卡住）
   - 教練建議每個欄位都有內容，沒有 undefined、NaN 之類的錯字
   - 牌局中的速算練習每題都有正確答案，作答完會出現結論
+  - 每次輪到你都有勝率條、速算小抄顯示正常
   - 每次教練建議都有專家分析；推算的對手範圍合理（緊的玩家加注後 AA 遠比 72s 可能），推算勝率夠快
   - 每手都有記到牌局紀錄，「紀錄 → 牌局分析」能正常顯示
   - Outs 練習出 1000 題：outs 數和逐張檢查一致、每步選項有正確答案、說明沒有錯字
@@ -59,7 +60,8 @@ async (hands) => {
           if (G.qz.Q.length && !cp.includes('class="qr"')) { errs.push(`第 ${G.no} 手速算練習作答完沒有結論`); break; }
           qzSeen++;
         }
-        const h = G.hint, txt = [h.title, h.why, h.next, h.dir && h.dir.t, ...(h.sit || []), ...h.info, outsGame(h), cp, ...(h.xp || []).map(x => x.t + x.h)].join('|');
+        const h = G.hint, txt = [h.title, h.why, h.next, h.dir && h.dir.t, ...(h.sit || []), ...h.info, outsGame(h), cp, eqBar(), ...(h.xp || []).map(x => x.t + x.h)].join('|');
+        if (!eqBar().includes('class="eb"')) { errs.push(`第 ${G.no} 手沒有勝率條`); break; }
         if (!h.xp || !h.xp.length) { errs.push(`第 ${G.no} 手教練沒有專家分析`); break; }
         if (h.eq != null && !(h.eq >= 0 && h.eq <= 100)) { errs.push(`第 ${G.no} 手推算勝率不合理：${h.eq}`); break; }
         if (h.os) {
@@ -134,6 +136,7 @@ async (hands) => {
       const B = rangeView(1).B;
       if (!(B[1] > 20 && B[0] < 20)) errs.push(`公共牌有一對時範圍分類不合理：${B}`);
     }
+    { const t = rTips(); if (/undefined|NaN|null|Infinity/.test(t) || !t.includes('到河牌')) errs.push('速算小抄內容有錯'); }
     go('eq'); EQM = 'outs';
     // 固定題：使用者回報的牌。手牌 7♥ 8♥，公共牌 10♠ A♠ Q♥ K♥。
     // 任何 J 都讓公共牌自己成順子（不算），但 J♥ 讓你成同花（要算），所以是 13 − 4 = 9 張

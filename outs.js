@@ -187,3 +187,47 @@ function calcPanel(){
   }else h+=`<button class="lnk" onclick="G.qz.show=true;render()">直接看答案</button>`;
   return h+'</div>';
 }
+
+// 牌局中的勝率條：長條是你的勝率；線是跟注需要的勝率（翻牌前是「大家平分」的勝率）
+function eqBar(){
+  const H=G.hint;if(!H||H.eq==null||ST.game.bar===false)return '';
+  const p=G.P[0],call=Math.min(G.curBet-p.bet,p.stack),pot=potT(),n=live().length-1,pre=G.street===0,Z=G.qz;
+  // 速算練習還沒答完時，先不畫出答案（聽牌機率和需要的勝率）
+  const qPend=!pre&&ST.game.calc!==false&&(H.os||call>0)&&!(Z&&(Z.show||Z.Q&&Z.Q.every((x,i)=>Z.a[i]!=null)));
+  const need=call>0?Math.round(call/(pot+call)*100):null,fair=Math.round(100/(n+1)),mk=pre?fair:qPend?null:need;
+  const rows=[['整手勝率',H.eq]];if(H.os&&!qPend)rows.push(['只看聽牌',H.os.est]);
+  let h=`<div class="eb"><div class="row"><b>你的勝率</b><span class="muted">對 ${n} 位對手</span></div>`;
+  h+=rows.map(([t,v])=>`<div class="ebr"><span class="ebl">${t}</span><div class="ebt"><i style="width:${Math.max(v,1)}%"></i>${mk!=null?`<b style="left:${mk}%"></b>`:''}</div><span class="ebv">${v}%</span></div>`).join('');
+  if(pre)h+=`<div class="ebn"><span class="tk"></span>線是 ${n+1} 人平分的 ${fair}%。超過線代表你的牌比平均好；但翻牌前還要看位置，照起手牌表打。</div>`;
+  else if(call>0&&!qPend){const N=Math.round(pot/call*10)/10;h+=`<div class="ebn"><span class="tk"></span>線是跟注需要的 ${need}%：底池 ${pot} 是跟注 ${call} 的 ${N} 倍 → 1 ÷（${N} ＋ 1）≈ ${need}%。<b>${H.eq>=need?'長條超過線，跟注划算':'長條沒到線，跟注不划算'}</b></div>`}
+  else if(call>0)h+=`<div class="ebn muted">跟注要多少勝率才划算？先在下方速算練習算算看，答完這裡會畫出線。</div>`;
+  else h+=`<div class="ebn muted">沒人下注，不用付錢就能看下一張。</div>`;
+  return h+'</div>';
+}
+
+// 勝率分頁的速算小抄：心算要背的數字（都用模擬或公式算過）
+function rTips(){
+  const bar=a=>`<div class="tr"><i style="width:${a}%"></i></div>`;
+  const O=[['卡順',4],['兩頭順子',8],['同花聽牌',9],['同花＋卡順',12],['同花＋兩頭順子',15]];
+  let h=`<div class="lbl" style="margin-top:16px">1. 下一張中牌的機率：outs × 2</div>
+  <p class="cap">深色是下一張就中（×2），淺色是一路看到河牌（×4，對手全下時才用）。數字是精確值。</p>`;
+  h+=O.map(([t,o])=>{const a=Math.round(o/47*1000)/10,b=Math.round((1-(47-o)*(46-o)/(47*46))*1000)/10;
+    return `<div class="hb tb tw"><span class="hl">${t}<small>${o} 張 outs</small></span><div class="tr"><i class="lt" style="width:${b}%"></i><i style="width:${a}%"></i></div><span class="hv">${Math.round(a)}%<small>到河牌 ${Math.round(b)}%</small></span></div>`}).join('');
+  h+=`<p class="cap" style="margin-top:6px">速算：9 張 × 2 = 18%（精確 19%）；× 4 = 36%（精確 35%）。outs 超過 8 張時 ×4 會算太高，例如 15 張算出 60%，其實只有 54%。</p>`;
+  const B=[['底池的 1/3',20],['半個底池',25],['底池的 2/3',29],['底池的 3/4',30],['一整個底池',33],['底池的 2 倍',40]];
+  h+=`<div class="lbl" style="margin-top:18px">2. 跟注需要多少勝率：看對手下多大</div>
+  <p class="cap">公式：對手下注 ÷（原本底池 ＋ 2 × 對手下注）。下注越大，你需要的勝率越高。</p>`;
+  h+=B.map(([t,v])=>`<div class="hb tw"><span class="hl">${t}</span>${bar(v)}<span class="hv">${v}%</span></div>`).join('');
+  h+=`<p class="cap" style="margin-top:6px">更簡單的算法：看「底池（含對手下注）是你要跟的錢的幾倍」，叫它 N，需要的勝率就是 1 ÷（N ＋ 1）。<br>2 倍 → 33%　3 倍 → 25%　4 倍 → 20%　5 倍 → 17%</p>`;
+  const V=[['KK','88',80],['AK','AQ',74],['QQ','AK',57],['22','AK',53],['AK','76',62],['87 同花','AA',23]];
+  h+=`<div class="lbl" style="margin-top:18px">3. 翻牌前常見對戰（打到最後的勝率）</div>
+  <p class="cap">左邊黃色是前面那手牌，右邊是後面那手。花色不同、不同花。</p>`;
+  h+=V.map(([a,b,v])=>`<div class="vs"><span>${a}</span><div class="sp"><i style="width:${v}%"></i></div><span>${b}</span><span class="hv">${v} : ${100-v}</span></div>`).join('');
+  h+=`<p class="cap" style="margin-top:6px">好記的說法：大對子對小對子約 80 : 20；同一張大牌、踢腳比人小約 25 : 75；對子對兩張比它大的牌，接近擲硬幣。</p>`;
+  const M=[['AA',[85,73,64,56,49]],['KQ',[62,44,35,29,26]],['76 同花',[46,32,25,21,18]]];
+  h+=`<div class="lbl" style="margin-top:18px">4. 對手越多，勝率越低（翻牌前，對手拿隨機牌）</div>
+  <div class="mo"><span></span>${[1,2,3,4,5].map(n=>`<span class="muted">${n} 人</span>`).join('')}`;
+  h+=M.map(([t,a])=>`<span>${t}</span>${a.map(v=>`<span class="mc"><i style="height:${v*.4}px"></i>${v}%</span>`).join('')}`).join('');
+  h+=`</div><p class="cap" style="margin-top:6px">每多一位對手，勝率大約打 7 到 9 折：好牌（AA）掉得慢，普通的牌掉得快。人多時要用更好的牌才入池。</p>`;
+  return h;
+}

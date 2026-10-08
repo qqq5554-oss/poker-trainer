@@ -268,7 +268,7 @@ function coach(){
     const er=Math.round(eqRange(1000)*100),fair=Math.round(100/(n1+1));
     xp.push({t:'實際勝率',h:`${dl(l)} 對上還沒蓋牌的 ${n1} 位對手${raised?'（已經算進加注者的牌比較強）':''}，打到最後的勝率約 ${er}%。${n1+1} 個人平分的話每人是 ${fair}%，${er>=fair*1.3?'你明顯比平均好。':er>=fair*.9?'和平均差不多。':'比平均差。'}${t===0&&er>=fair*.9?`不過勝率不是全部：${dl(l)} 中了對子也常輸給踢腳更大的同類牌，翻牌後${late?'':'又沒位置，'}很難打，新手照起手牌表蓋掉比較穩。`:''}`});
     if(!raised&&behind)xp.push({t:'後面的人',h:`後面還有 ${behind} 人沒行動，其中有人拿到 AA、KK、QQ、JJ、AK 這類頂級牌的機率約 ${Math.round((1-Math.pow(1-44/1326,behind))*100)}%。後面的人越多，越要小心。`});
-    const R=(o)=>Object.assign({sit,info,xp},o);
+    const R=(o)=>Object.assign({sit,info,xp,eq:er},o);
     if(!raised){
       const to=cap(3*BBV+BBV*lp);
       if(t===1||t===2||(t===3&&late))return R({cat:'a',ok:['a'],to,title:`加注到 ${to}`,dir:A('積極：加注入池'),why:`${dl(l)} 屬於「${TN[t]}」${t===3?'，而你在後位，可以玩':''}。好牌要主動加注入池：逼走弱牌，讓底池裡的人變少，比只跟注更容易贏。${lp?`前面有 ${lp} 人只跟注，所以每多一人多加 1 個大盲。`:''}`,next:'翻牌後如果中了對子以上或強聽牌，繼續下注；沒中而對手下注，大多可以放棄。'});
@@ -396,6 +396,7 @@ function gReset(){if(!confirm('所有人的籌碼回到 200，重新開始？'))
 function gRebuy(){ST.game.stacks[0]=START;save();render()}
 function gHint(m){ST.game.hint=m;save();render()}
 function gCalc(v){ST.game.calc=v;save();render()}
+function gBar(v){ST.game.bar=v;save();render()}
 
 const SEATXY=[null,[11,73],[11,29],[50,14],[89,29],[89,73]];
 const BETXY=[[50,89],[30,76],[30,41],[50,35],[70,41],[70,76]];
@@ -414,6 +415,8 @@ function rPlay(){
     ${BOTS.map(b=>`<div class="stat"><span>${b.name}　<span class="muted">${b.d}</span></span><span class="pos" style="font-size:13px;padding:0 8px;white-space:nowrap">${b.style}</span></div>`).join('')}
     <div class="lbl">教練建議</div>
     <div class="seg"><button class="${gs.hint==='auto'?'on':''}" onclick="gHint('auto')">直接顯示</button><button class="${gs.hint!=='auto'?'on':''}" onclick="gHint('tap')">我先想，再點開看</button></div>
+    <div class="lbl">勝率條（輪到你時，用長條看勝率夠不夠）</div>
+    <div class="seg"><button class="${gs.bar!==false?'on':''}" onclick="gBar(true)">顯示</button><button class="${gs.bar===false?'on':''}" onclick="gBar(false)">不顯示</button></div>
     <div class="lbl">速算練習（翻牌後輪到你時，練算 outs 和底池賠率）</div>
     <div class="seg"><button class="${gs.calc!==false?'on':''}" onclick="gCalc(true)">顯示</button><button class="${gs.calc===false?'on':''}" onclick="gCalc(false)">不顯示</button></div>
     <div class="row" style="margin-top:16px"><span>你的籌碼</span><span class="big-n" style="font-size:30px">${gs.stacks[0]}</span></div>`;
@@ -438,7 +441,7 @@ function rPlay(){
   if(my){
     const call=G.curBet-me.bet,cc=Math.min(call,me.stack),canR=me.stack>call;
     h+=`<div class="need">${call>0?`前面最高下到 <b>${G.curBet}</b>，你要補 <b>${cc}</b> 才能繼續`:'目前沒人下注，可以免費過牌'}</div>
-    <div class="grid3"><button onclick="uAct('fold')">蓋牌</button>
+    ${eqBar()}<div class="grid3"><button onclick="uAct('fold')">蓋牌</button>
     <button onclick="uAct('${call>0?'call':'check'}')">${call>0?(me.stack<=call?`全下跟注 ${cc}`:`跟注 ${cc}`):'過牌'}</button>
     ${canR?`<button class="${G.raiseOpen?'right':''}" onclick="G.raiseOpen=!G.raiseOpen;render()">${G.curBet?'加注…':'下注…'}</button>`:'<button disabled style="opacity:.35">加注</button>'}</div>`;
     if(G.raiseOpen&&canR){

@@ -150,6 +150,20 @@ input[type=range]{width:100%;accent-color:var(--brass);margin:12px 0 4px}
 .stp .cur{color:var(--brass);border-color:var(--brass)}.stp .ok{color:var(--ok);border-color:var(--ok)}.stp .no{color:var(--bad);border-color:var(--bad)}
 .ox p{margin:8px 0 0}
 
+.eb{margin:4px 0 10px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--felt-d)}
+.eb .row b{font-weight:600;font-size:14px}.eb .row .muted{font-size:12px}
+.ebr{display:grid;grid-template-columns:4.6em minmax(0,1fr) 3em;gap:8px;align-items:center;margin-top:8px;font-size:13px}
+.ebt{position:relative;height:14px;border-radius:0 4px 4px 0;background:var(--felt-l)}
+.ebt i{display:block;height:100%;background:var(--brass);border-radius:0 4px 4px 0}
+.ebt b{position:absolute;top:-5px;bottom:-5px;width:2px;margin-left:-1px;background:var(--ivory);box-shadow:0 0 0 1px var(--felt-d)}
+.ebv{text-align:right;font-family:Georgia,serif;font-size:16px}
+.ebn{font-size:12px;color:var(--mute);margin-top:8px;line-height:1.55}.ebn b{color:var(--ivory);font-weight:600}
+.tk{display:inline-block;width:2px;height:11px;background:var(--ivory);margin-right:6px;vertical-align:-1px}
+.hb.tw{grid-template-columns:7.4em minmax(0,1fr) 4.6em}.tb .tr{position:relative}.tb .tr i{position:absolute;left:0;top:0}.tr i.lt{opacity:.35}
+.vs{display:grid;grid-template-columns:4.6em minmax(0,1fr) 3.4em 4.2em;gap:8px;align-items:center;padding:5px 0;font-size:14px}
+.vs span:nth-child(3){text-align:left}.sp{height:10px;border-radius:4px;background:var(--line);overflow:hidden}.sp i{display:block;height:100%;background:var(--brass);border-right:2px solid var(--felt)}
+.mo{display:grid;grid-template-columns:4.6em repeat(5,minmax(0,1fr));gap:6px 4px;align-items:end;font-size:13px;margin-top:8px}
+.mc{display:flex;flex-direction:column;align-items:center;gap:3px;font-family:Georgia,serif}.mc i{display:block;width:14px;background:var(--brass);border-radius:3px 3px 0 0}
 .qz{margin-top:12px;padding:10px 12px 12px;border:1px solid var(--brass);border-radius:12px;background:var(--felt-d)}
 .qz .row b{color:var(--brass)}
 .qq{font-size:14px;margin:10px 0 6px}
@@ -260,7 +274,7 @@ function deal(k,ex=[]){
 }
 
 const KEY='pokerTrainer.v1';
-const blank=()=>({name:{c:0,t:0},vs:{c:0,t:0},pre:{c:0,t:0},eqN:0,wrong:{},play:{hands:0,won:0,net:0,dec:{c:0,t:0}},game:{stacks:[200,200,200,200,200,200],btn:-1,hint:'tap',calc:true},hist:[],outs:{c:0,t:0}});
+const blank=()=>({name:{c:0,t:0},vs:{c:0,t:0},pre:{c:0,t:0},eqN:0,wrong:{},play:{hands:0,won:0,net:0,dec:{c:0,t:0}},game:{stacks:[200,200,200,200,200,200],btn:-1,hint:'tap',calc:true,bar:true},hist:[],outs:{c:0,t:0}});
 let ST;try{ST=JSON.parse(localStorage.getItem(KEY))}catch(e){}
 ST=Object.assign(blank(),ST||{});
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(ST))}catch(e){}};
@@ -465,7 +479,8 @@ function eqRun(){
   setTimeout(step,30);
 }
 function rEq(){
-  const seg=`<div class="seg" style="margin-bottom:6px"><button class="${EQM==='calc'?'on':''}" onclick="EQM='calc';render()">算勝率</button><button class="${EQM==='outs'?'on':''}" onclick="EQM='outs';render()">Outs 練習</button></div>`;
+  const seg=`<div class="seg" style="margin-bottom:6px"><button class="${EQM==='calc'?'on':''}" onclick="EQM='calc';render()">算勝率</button><button class="${EQM==='outs'?'on':''}" onclick="EQM='outs';render()">Outs 練習</button><button class="${EQM==='tips'?'on':''}" onclick="EQM='tips';render()">速算小抄</button></div>`;
+  if(EQM==='tips'){M.innerHTML=`<h1>勝率</h1><p class="sub">牌桌上心算要背的數字，都用模擬或公式算過</p>${seg}${rTips()}`;return}
   if(EQM==='outs'){M.innerHTML=`<h1>勝率</h1><p class="sub">一步一步學會數 outs、算機率，決定跟還是蓋</p>${seg}${rOuts()}`;return}
   const sl=(t,i)=>{const sel=EQ.sel[0]===t&&EQ.sel[1]===i,c=EQ[t][i];return cardH(c,'tap '+(sel?(c==null?'sel':'hl'):''),`onclick="eqSel('${t}',${i})"`)};
   const u=used();
