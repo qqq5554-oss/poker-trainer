@@ -1,31 +1,41 @@
 /* 牌局 */
 const BBV=2,SBV=1,START=200;
-const POSN=['BTN','SB','BB','UTG','HJ','CO'];
 const POSZ={BTN:'莊家',SB:'小盲',BB:'大盲',UTG:'前位',HJ:'中位',CO:'切位'};
 const STN=['翻牌前','翻牌','轉牌','河牌','攤牌'];
-const BOTS=[
- {name:'阿明',style:'緊凶',d:'牌好才玩，一玩就下重注',loose:-1,aggr:.75,bluff:.08,cadj:.05,bluffable:true,
-  pre:'加注的是阿明，他牌好才玩，加注通常代表牌不錯',bet:'下注的是阿明，他有好牌或強聽牌都會下注，要尊重，但不一定是最大牌',tip:'阿明沒中牌時會蓋牌，你主動下注有機會讓他放棄'},
- {name:'小美',style:'鬆凶',d:'什麼牌都想玩，常加注、也常虛張聲勢',loose:2,aggr:.8,bluff:.2,cadj:-.02,wild:true,
-  pre:'加注的是小美，小美什麼牌都愛加注，加注不代表牌好',bet:'下注的是小美，小美常虛張聲勢，下注的牌可能很普通，中等的牌可以多跟一點',tip:'別對小美虛張聲勢，小美不愛蓋牌；有好牌就讓小美自己下注'},
- {name:'老王',style:'跟注站',d:'幾乎都跟注，很少加注也很少蓋牌',loose:3,aggr:.12,bluff:.02,cadj:-.14,honest:true,station:true,
-  pre:'加注的是老王，他很少加注，但他玩的牌很多，加注時牌不一定很大，通常至少是還不錯的牌',bet:'下注的是老王，他幾乎只會跟注，主動下注通常是真的有牌',tip:'老王什麼都跟：有好牌就多下注讓他付錢，沒牌千萬別虛張聲勢'},
- {name:'阿華',style:'緊弱',d:'很保守，他一下注通常就是大牌',loose:-1.5,aggr:.25,bluff:.02,cadj:.08,honest:true,bluffable:true,
-  pre:'加注的是阿華，他很保守，加注通常是大牌',bet:'下注的是阿華，他很少下注，一下注通常就是大牌，中等的牌就放棄吧',tip:'阿華很容易被嚇跑，你下注常常就能讓他蓋牌'},
- {name:'小芳',style:'平衡',d:'打法中規中矩',loose:0,aggr:.5,bluff:.1,cadj:0,bluffable:true,
-  pre:'加注的是小芳，小芳打法中規中矩，照起手牌表判斷就好',bet:'下注的是小芳，小芳打法平衡，照勝率和底池賠率判斷就好',tip:'小芳打法平衡，用正常打法應對就好'}
-];
+// 電腦對手的 5 種打法；說明文字用名字，不用代名詞（名字可以自己改）
+const BSTY={
+ tag:{style:'緊凶',d:'牌好才玩，一玩就下重注',loose:-1,aggr:.75,bluff:.08,cadj:.05,bluffable:true,
+  pre:n=>`加注的是${n}，${n}牌好才玩，加注通常代表牌不錯`,bet:n=>`下注的是${n}，有好牌或強聽牌都會下注，要尊重，但不一定是最大牌`,tip:n=>`${n}沒中牌時會蓋牌，你主動下注有機會讓對方放棄`},
+ lag:{style:'鬆凶',d:'什麼牌都想玩，常加注、也常虛張聲勢',loose:2,aggr:.8,bluff:.2,cadj:-.02,wild:true,
+  pre:n=>`加注的是${n}，${n}什麼牌都愛加注，加注不代表牌好`,bet:n=>`下注的是${n}，${n}常虛張聲勢，下注的牌可能很普通，中等的牌可以多跟一點`,tip:n=>`別對${n}虛張聲勢，${n}不愛蓋牌；有好牌就讓${n}自己下注`},
+ sta:{style:'跟注站',d:'幾乎都跟注，很少加注也很少蓋牌',loose:3,aggr:.12,bluff:.02,cadj:-.14,honest:true,station:true,
+  pre:n=>`加注的是${n}，${n}很少加注，但玩的牌很多，加注時牌不一定很大，通常至少是還不錯的牌`,bet:n=>`下注的是${n}，${n}幾乎只會跟注，主動下注通常是真的有牌`,tip:n=>`${n}什麼都跟：有好牌就多下注讓對方付錢，沒牌千萬別虛張聲勢`},
+ nit:{style:'緊弱',d:'很保守，一下注通常就是大牌',loose:-1.5,aggr:.25,bluff:.02,cadj:.08,honest:true,bluffable:true,
+  pre:n=>`加注的是${n}，${n}很保守，加注通常是大牌`,bet:n=>`下注的是${n}，${n}很少下注，一下注通常就是大牌，中等的牌就放棄吧`,tip:n=>`${n}很容易被嚇跑，你下注常常就能讓對方蓋牌`},
+ bal:{style:'平衡',d:'打法中規中矩',loose:0,aggr:.5,bluff:.1,cadj:0,bluffable:true,
+  pre:n=>`加注的是${n}，${n}打法中規中矩，照起手牌表判斷就好`,bet:n=>`下注的是${n}，${n}打法平衡，照勝率和底池賠率判斷就好`,tip:n=>`${n}打法平衡，用正常打法應對就好`}
+};
+const OPP0=[{n:'阿明',s:'tag'},{n:'小美',s:'lag'},{n:'老王',s:'sta'},{n:'阿華',s:'nit'},{n:'小芳',s:'bal'}];
+const esc=t=>String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+const oppList=()=>{const o=ST.game.opp;return Array.isArray(o)&&o.length>=1&&o.length<=5?o:OPP0};
+// 依設定組出這桌的電腦對手（名字、打法參數、教練引用的說明）
+const BOTS=()=>oppList().map(o=>{const t=BSTY[o.s]||BSTY.bal,n=esc(o.n||'電腦');return Object.assign({},t,{name:n,pre:t.pre(n),bet:t.bet(n),tip:t.tip(n)})});
+// 座位名稱：莊家、小盲、大盲，其餘從後往前是切位、中位、前位；兩人對打時莊家同時是小盲
+const POSL={2:['BTN','BB'],3:['BTN','SB','BB'],4:['BTN','SB','BB','UTG'],5:['BTN','SB','BB','UTG','CO'],6:['BTN','SB','BB','UTG','HJ','CO']};
 let G={phase:'idle',P:[],board:[],log:[],dec:[]};
-const posOf=i=>POSN[(i-G.btn+6)%6];
+const NP=()=>G.P.length;
+const posOf=i=>POSL[NP()][(i-G.btn+NP())%NP()];
+const posZ=i=>POSZ[posOf(i)]+(NP()===2&&posOf(i)==='BTN'?'（小盲）':'');
+const SBi=()=>NP()===2?G.btn:(G.btn+1)%NP(),BBi=()=>(SBi()+1)%NP();
 const isLate=p=>p==='CO'||p==='BTN';
 const potT=()=>G.P.reduce((a,p)=>a+p.total,0);
 const live=()=>G.P.filter(p=>!p.folded);
 const canAct=p=>!p.folded&&!p.allin;
 const needs=i=>{const p=G.P[i];return canAct(p)&&(!p.acted||p.bet<G.curBet)};
-const nextFrom=i=>{for(let k=1;k<=6;k++){const j=(i+k)%6;if(needs(j))return j}return -1};
+const nextFrom=i=>{const n=NP();for(let k=1;k<=n;k++){const j=(i+k)%n;if(needs(j))return j}return -1};
 const lg=(t,k='')=>G.log.push({t,k});
 function put(i,x){const p=G.P[i];x=Math.min(x,p.stack);p.stack-=x;p.bet+=x;p.total+=x;if(p.stack===0)p.allin=true;return x}
-function limpers(){const sb=(G.btn+1)%6,bb=(G.btn+2)%6;return G.P.filter(p=>p.i!==sb&&p.i!==bb&&!p.folded&&p.bet===BBV).length}
+function limpers(){const sb=SBi(),bb=BBi();return G.P.filter(p=>p.i!==sb&&p.i!==bb&&!p.folded&&p.bet===BBV).length}
 
 function eqMC(hole,board,opp,N){
   const kn=[...hole,...board],d=[];for(let i=0;i<52;i++)if(!kn.includes(i))d.push(i);
@@ -63,25 +73,26 @@ function chen(l){
 }
 
 function gStart(){
-  const gs=ST.game;clearTimeout(G.timer);
+  const gs=ST.game,bots=BOTS(),N=bots.length+1;clearTimeout(G.timer);
+  if(!Array.isArray(gs.stacks)||gs.stacks.length!==N){gs.stacks=Array(N).fill(START);gs.btn=-1}
   if(gs.stacks[0]<BBV){render();return}
   G={phase:'play',board:[],log:[],dec:[],street:0,ag:[-1,-1,-1,-1],fast:false,runout:false,lastFb:null,raiseOpen:false};
-  G.btn=gs.btn<0?rnd(6):(gs.btn+1)%6;gs.btn=G.btn;
+  G.btn=gs.btn<0?rnd(N):(gs.btn+1)%N;gs.btn=G.btn;
   G.P=[];
-  for(let i=0;i<6;i++){
+  for(let i=0;i<N;i++){
     let s=gs.stacks[i];
-    if(i>0&&s<BBV){s=START;lg(`${BOTS[i-1].name} 輸光了，重新買入 ${START} 籌碼。`,'sys')}
-    G.P.push({i,name:i?BOTS[i-1].name:'你',bot:i?BOTS[i-1]:null,stack:s,start:s,hole:[],bet:0,total:0,folded:false,allin:false,acted:false,last:'',show:i===0});
+    if(i>0&&s<BBV){s=START;lg(`${bots[i-1].name} 輸光了，重新買入 ${START} 籌碼。`,'sys')}
+    G.P.push({i,name:i?bots[i-1].name:'你',bot:i?bots[i-1]:null,stack:s,start:s,hole:[],bet:0,total:0,folded:false,allin:false,acted:false,last:'',show:i===0});
   }
   rangeInit();G.lb=null;
   G.deck=deal(52);
-  for(let r=0;r<2;r++)for(let k=1;k<=6;k++)G.P[(G.btn+k)%6].hole.push(G.deck.pop());
+  for(let r=0;r<2;r++)for(let k=1;k<=N;k++)G.P[(G.btn+k)%N].hole.push(G.deck.pop());
   G.no=ST.play.hands+1;
-  const sb=(G.btn+1)%6,bb=(G.btn+2)%6;
+  const sb=SBi(),bb=BBi();
   put(sb,SBV);G.P[sb].last='小盲 '+G.P[sb].bet;
   put(bb,BBV);G.P[bb].last='大盲 '+G.P[bb].bet;
   G.curBet=BBV;G.lastRaise=BBV;
-  lg(`第 ${G.no} 手。你坐在 ${posOf(0)}（${POSZ[posOf(0)]}），莊家是${G.P[G.btn].name}。`,'sys');
+  lg(`第 ${G.no} 手。你坐在 ${posOf(0)}（${posZ(0)}），莊家是${G.P[G.btn].name}${N===2?'（兩人對打時，莊家同時是小盲）':''}。`,'sys');
   lg(`${G.P[sb].name}下小盲 ${SBV}，${G.P[bb].name}下大盲 ${BBV}。`);
   lg('翻牌前：每人拿到兩張手牌，從大盲左邊的人開始行動。','st');
   G.cur=nextFrom(bb);
@@ -150,7 +161,7 @@ function showdown(){
     let amt=0;G.P.forEach(p=>{amt+=Math.max(0,Math.min(p.total,k===lv.length-1?Infinity:l)-prev)});
     const el=L.filter(p=>p.total>=l);prev=l;if(!amt)return;
     const best=Math.max(...el.map(p=>p.val));
-    const ws=el.filter(p=>p.val===best).sort((a,b)=>((a.i-G.btn+5)%6)-((b.i-G.btn+5)%6));
+    const ws=el.filter(p=>p.val===best).sort((a,b)=>ORD(a.i)-ORD(b.i));
     const sh=Math.floor(amt/ws.length);let rem=amt-sh*ws.length;
     ws.forEach(p=>{p.stack+=sh+(rem>0?1:0);rem--});
     pots.push({amt,w:ws.map(p=>p.i),best});
@@ -207,7 +218,7 @@ function botDecide(i){
   return {type:'fold'};
 }
 
-const ORD=i=>(i-G.btn+5)%6;
+const ORD=i=>(i-G.btn+NP()-1)%NP();
 function boardTex(b){
   const sc=[0,0,0,0],rs=new Set();b.forEach(c=>{sc[c&3]++;rs.add(c>>2)});
   const ms=Math.max(...sc),paired=rs.size<b.length,more=b.length<5;
@@ -392,16 +403,27 @@ function uAct(type){
   doAct(0,type,G.raiseTo);
 }
 function setRT(v){G.raiseTo=+v;const e=document.getElementById('rto');if(e)e.textContent=v;const s=document.getElementById('rsl');if(s)s.value=v}
-function gReset(){if(!confirm('所有人的籌碼回到 200，重新開始？'))return;clearTimeout(G.timer);ST.game.stacks=[START,START,START,START,START,START];ST.game.btn=-1;save();G={phase:'idle',P:[],board:[],log:[],dec:[]};render()}
+function gReset(){if(!confirm('所有人的籌碼回到 200，重新開始？'))return;clearTimeout(G.timer);ST.game.stacks=Array(oppList().length+1).fill(START);ST.game.btn=-1;save();G={phase:'idle',P:[],board:[],log:[],dec:[]};render()}
 function gRebuy(){ST.game.stacks[0]=START;save();render()}
 function gHint(m){ST.game.hint=m;save();render()}
 function gCalc(v){ST.game.calc=v;save();render()}
 function gBar(v){ST.game.bar=v;save();render()}
+// 對手設定：人數（1–5 位電腦）、名字、打法
+function gOppN(d){
+  const o=oppList().map(x=>Object.assign({},x)),n=Math.min(5,Math.max(1,o.length+d));if(n===o.length)return;
+  if(ST.game.stacks.some(x=>x!==START)&&!confirm('改變人數會讓所有人的籌碼回到 200，確定嗎？'))return;
+  if(n>o.length){const used=o.map(x=>x.n),nx=OPP0.find(x=>!used.includes(x.n));o.push(nx?Object.assign({},nx):{n:`電腦${n}`,s:'bal'})}else o.pop();
+  ST.game.opp=o;ST.game.stacks=Array(n+1).fill(START);ST.game.btn=-1;save();render();
+}
+function gOppName(i,v){const o=oppList().map(x=>Object.assign({},x));v=String(v).trim().slice(0,6);o[i].n=v||(OPP0[i]?OPP0[i].n:`電腦${i+1}`);ST.game.opp=o;save();render()}
+function gOppSty(i,v){const o=oppList().map(x=>Object.assign({},x));if(!BSTY[v])return;o[i].s=v;ST.game.opp=o;save();render()}
 
-const SEATXY=[null,[11,73],[11,29],[50,14],[89,29],[89,73]];
-const BETXY=[[50,89],[30,76],[30,41],[50,35],[70,41],[70,76]];
+// 牌桌上的座位：5 個位置，依電腦人數平均挑
+const SEAT5=[[11,73],[11,29],[50,14],[89,29],[89,73]],BET5=[[30,76],[30,41],[50,35],[70,41],[70,76]];
+const LAY={1:[2],2:[1,3],3:[1,2,3],4:[0,1,3,4],5:[0,1,2,3,4]};
+const seatXY=i=>SEAT5[LAY[NP()-1][i-1]],betXY=i=>i?BET5[LAY[NP()-1][i-1]]:[50,89];
 function seatH(p){
-  const [x,y]=SEATXY[p.i],done=G.phase==='done',act=G.cur===p.i&&G.phase==='play';
+  const [x,y]=seatXY(p.i),done=G.phase==='done',act=G.cur===p.i&&G.phase==='play';
   const cards=(p.show||done)?`<div class="cards xs">${p.hole.map(c=>cardH(c,p.folded?'dim':'')).join('')}</div>`:p.folded?'':'<div class="cb"></div><div class="cb"></div>';
   const tag=act?'思考中…':p.folded?'蓋牌':(p.show&&p.val!=null&&G.street===4)?handName(p.val):p.allin?'全下':p.last;
   return `<div class="seat ${act?'act':''} ${p.folded?'out':''} ${x<50?'lf':''}" style="left:${x}%;top:${y}%"><div class="box">${p.i===G.btn?'<span class="dbtn">D</span>':''}<div class="nm">${p.name}</div><div class="stk">${p.stack}</div><div class="hc">${cards}</div></div><div class="tag">${tag||posOf(p.i)}</div></div>`;
@@ -409,10 +431,13 @@ function seatH(p){
 function rPlay(){
   const gs=ST.game;
   if(G.phase==='idle'){
-    let h=`<h1>牌局</h1><p class="sub">跟 5 位電腦對手打完整的一手，教練在你每次行動前給建議</p>
+    const ol=oppList();
+    let h=`<h1>牌局</h1><p class="sub">跟 ${ol.length} 位電腦對手打完整的一手，教練在你每次行動前給建議</p>
     <p class="muted" style="margin:0">每人 200 籌碼，盲注 1／2。籌碼會延續到下一手，莊家每手往左移一位。</p>
-    <div class="lbl">今天的對手</div>
-    ${BOTS.map(b=>`<div class="stat"><span>${b.name}　<span class="muted">${b.d}</span></span><span class="pos" style="font-size:13px;padding:0 8px;white-space:nowrap">${b.style}</span></div>`).join('')}
+    <div class="row" style="margin-top:14px"><span>對手人數<span class="muted">　共 ${ol.length+1} 人一桌</span></span><div class="stepper"><button onclick="gOppN(-1)" aria-label="減少對手" ${ol.length<=1?'disabled':''}>−</button><span>${ol.length}</span><button onclick="gOppN(1)" aria-label="增加對手" ${ol.length>=5?'disabled':''}>+</button></div></div>
+    <div class="lbl">對手的名字和打法</div>
+    ${ol.map((o,i)=>{const t=BSTY[o.s]||BSTY.bal;return `<div class="opp"><input value="${esc(o.n)}" maxlength="6" onchange="gOppName(${i},this.value)" aria-label="第 ${i+1} 位對手的名字"><select onchange="gOppSty(${i},this.value)" aria-label="第 ${i+1} 位對手的打法">${Object.keys(BSTY).map(k=>`<option value="${k}" ${k===o.s?'selected':''}>${BSTY[k].style}</option>`).join('')}</select><div class="muted">${t.d}</div></div>`}).join('')}
+    <p class="cap" style="margin-top:6px">改人數會讓所有人的籌碼回到 200；改名字、打法不影響籌碼。人少時每個人玩的牌會變多，後位的範圍也更寬。</p>
     <div class="lbl">教練建議</div>
     <div class="seg"><button class="${gs.hint==='auto'?'on':''}" onclick="gHint('auto')">直接顯示</button><button class="${gs.hint!=='auto'?'on':''}" onclick="gHint('tap')">我先想，再點開看</button></div>
     <div class="lbl">勝率條（輪到你時，用長條看勝率夠不夠）</div>
@@ -430,11 +455,11 @@ function rPlay(){
   <div class="pot">底池 <b>${pot}</b></div>
   <div class="bd">${[0,1,2,3,4].map(k=>cardH(G.board[k])).join('')}</div>
   ${G.P.slice(1).map(seatH).join('')}
-  ${G.P.filter(p=>p.bet>0).map(p=>`<div class="chip" style="left:${BETXY[p.i][0]}%;top:${BETXY[p.i][1]}%">${p.bet}</div>`).join('')}
+  ${G.P.filter(p=>p.bet>0).map(p=>`<div class="chip" style="left:${betXY(p.i)[0]}%;top:${betXY(p.i)[1]}%">${p.bet}</div>`).join('')}
   </div>`;
   const myHand=G.board.length>=3?handName(ev([...me.hole,...G.board])):null;
   h+=`<div class="me ${my?'act':''}"><div class="cards">${me.hole.map(c=>cardH(c,me.folded?'dim':'')).join('')}</div><div class="inf">
-  <span class="pos" style="font-size:13px;padding:0 8px">${posOf(0)} ${POSZ[posOf(0)]}</span>${G.btn===0?' <span class="dbtn" style="position:static;display:inline-block">D</span>':''}
+  <span class="pos" style="font-size:13px;padding:0 8px">${posOf(0)} ${posZ(0)}</span>${G.btn===0?' <span class="dbtn" style="position:static;display:inline-block">D</span>':''}
   <div><span class="stk">${me.stack}</span> <span class="muted">籌碼</span></div>
   <div class="muted">${me.folded?'你已蓋牌':me.allin?'你已全下':myHand?'目前：'+myHand:''}</div></div></div>`;
 

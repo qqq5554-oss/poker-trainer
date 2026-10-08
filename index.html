@@ -164,6 +164,11 @@ input[type=range]{width:100%;accent-color:var(--brass);margin:12px 0 4px}
 .vs span:nth-child(3){text-align:left}.sp{height:10px;border-radius:4px;background:var(--line);overflow:hidden}.sp i{display:block;height:100%;background:var(--brass);border-right:2px solid var(--felt)}
 .mo{display:grid;grid-template-columns:4.6em repeat(5,minmax(0,1fr));gap:6px 4px;align-items:end;font-size:13px;margin-top:8px}
 .mc{display:flex;flex-direction:column;align-items:center;gap:3px;font-family:Georgia,serif}.mc i{display:block;width:14px;background:var(--brass);border-radius:3px 3px 0 0}
+.opp{display:grid;grid-template-columns:minmax(0,1fr) 7.5em;gap:6px 8px;padding:8px 0;border-bottom:1px solid var(--line)}
+.opp .muted{grid-column:1/-1;font-size:13px}
+.opp input,.opp select{font:inherit;font-size:16px;color:var(--ivory);background:var(--felt-d);border:1px solid var(--line);border-radius:8px;padding:6px 10px;min-height:40px;width:100%}
+.opp select{color:var(--brass)}
+.stepper button:disabled{opacity:.3}
 .qz{margin-top:12px;padding:10px 12px 12px;border:1px solid var(--brass);border-radius:12px;background:var(--felt-d)}
 .qz .row b{color:var(--brass)}
 .qq{font-size:14px;margin:10px 0 6px}
@@ -274,7 +279,7 @@ function deal(k,ex=[]){
 }
 
 const KEY='pokerTrainer.v1';
-const blank=()=>({name:{c:0,t:0},vs:{c:0,t:0},pre:{c:0,t:0},eqN:0,wrong:{},play:{hands:0,won:0,net:0,dec:{c:0,t:0}},game:{stacks:[200,200,200,200,200,200],btn:-1,hint:'tap',calc:true,bar:true},hist:[],outs:{c:0,t:0}});
+const blank=()=>({name:{c:0,t:0},vs:{c:0,t:0},pre:{c:0,t:0},eqN:0,wrong:{},play:{hands:0,won:0,net:0,dec:{c:0,t:0}},game:{stacks:[200,200,200,200,200,200],opp:OPP0.map(o=>Object.assign({},o)),btn:-1,hint:'tap',calc:true,bar:true},hist:[],outs:{c:0,t:0}});
 let ST;try{ST=JSON.parse(localStorage.getItem(KEY))}catch(e){}
 ST=Object.assign(blank(),ST||{});
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(ST))}catch(e){}};

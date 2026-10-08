@@ -6,6 +6,7 @@
   - 教練建議每個欄位都有內容，沒有 undefined、NaN 之類的錯字
   - 牌局中的速算練習每題都有正確答案，作答完會出現結論
   - 每次輪到你都有勝率條、速算小抄顯示正常
+  - 2 到 6 人桌輪流打，打法隨機；對手名字有 HTML 特殊字元也能正常顯示
   - 每次教練建議都有專家分析；推算的對手範圍合理（緊的玩家加注後 AA 遠比 72s 可能），推算勝率夠快
   - 每手都有記到牌局紀錄，「紀錄 → 牌局分析」能正常顯示
   - Outs 練習出 1000 題：outs 數和逐張檢查一致、每步選項有正確答案、說明沒有錯字
@@ -40,7 +41,15 @@ async (hands) => {
   ST.game.stacks = [200, 200, 200, 200, 200, 200]; ST.game.btn = -1; save();
   go('play');
   let rangeMs = 0, qzSeen = 0, osSeen = 0, coachSeen = 0, played = 0, rebuys = 0, showdowns = 0, splits = 0, sidePots = 0, idle = 0;
+  // 每 40 手換一種桌子：2 到 6 人、隨機打法，其中一位名字有 HTML 特殊字元（要正常顯示、不能變成標籤）
+  const sizes = {};
+  const setTable = k => {
+    const ks = Object.keys(BSTY);
+    ST.game.opp = Array.from({length: k}, (_, j) => ({n: j === 0 ? '<b>&小' : '電腦' + (j + 1), s: ks[Math.floor(Math.random() * ks.length)]}));
+    ST.game.stacks = Array(k + 1).fill(200); ST.game.btn = -1;
+  };
   while (played < hands) {
+    if (played % 40 === 0) setTable([5, 1, 2, 3, 4][(played / 40) % 5]);
     if (ST.game.stacks[0] < BBV) { gRebuy(); rebuys++; }
     gStart();
     const startTotal = sum(G.P.map(p => p.start));
@@ -100,8 +109,22 @@ async (hands) => {
     if (G.street === 4) showdowns++;
     if (G.pots.length > 1) sidePots++;
     if (G.pots.some(x => x.w.length > 1)) splits++;
+    sizes[G.P.length] = (sizes[G.P.length] || 0) + 1;
+    if (oppList()[0].n === '<b>&小' && document.querySelector('.tbl .nm b')) { errs.push('對手名字裡的 HTML 被當成標籤'); break; }
     played++;
   }
+  // 兩人對打：莊家下小盲、翻牌前先行動；翻牌後大盲先行動
+  if (!errs.length) {
+    ST.game.opp = [{n: '電腦', s: 'bal'}]; ST.game.stacks = [200, 200]; ST.game.btn = -1;
+    for (let k = 0; k < 6 && !errs.length; k++) {
+      ST.game.stacks = [200, 200]; gStart(); clearTimeout(G.timer);
+      if (G.P[G.btn].total !== 1 || G.P[1 - G.btn].total !== 2) errs.push(`兩人對打盲注錯：莊家下 ${G.P[G.btn].total}`);
+      if (G.cur !== G.btn) errs.push(`兩人對打翻牌前應該莊家先行動，現在是座位 ${G.cur}`);
+      if (ORD(BBi()) !== 0 || ORD(G.btn) !== 1) errs.push('兩人對打翻牌後應該大盲先行動');
+      G.phase = 'idle';
+    }
+  }
+  ST.game.opp = OPP0.map(o => Object.assign({}, o)); ST.game.stacks = Array(6).fill(200); ST.game.btn = -1;
   // 牌局分析：每手都有紀錄，分析頁顯示正常
   if (!errs.length) {
     const want = Math.min(played, 500), last = ST.hist[ST.hist.length - 1];
@@ -176,7 +199,7 @@ async (hands) => {
     }
     go('play');
   }
-  return {rangeMs, qzSeen, osSeen, kinds, coachSeen, played, rebuys, showdowns, splits, sidePots, errs, stacks: ST.game.stacks, stats: ST.play};
+  return {sizes, rangeMs, qzSeen, osSeen, kinds, coachSeen, played, rebuys, showdowns, splits, sidePots, errs, stacks: ST.game.stacks, stats: ST.play};
 }
 """
 
@@ -212,6 +235,7 @@ def main():
     print(f"打了 {res['played']} 手：攤牌 {res['showdowns']}、有邊池 {res['sidePots']}、"
           f"平分 {res['splits']}、你重新買入 {res['rebuys']} 次、檢查教練建議 {res['coachSeen']} 次")
     print(f"牌局中遇到聽牌、檢查 Outs 計算 {res['osSeen']} 次；速算練習出現 {res['qzSeen']} 次")
+    print(f"各種人數打的手數：{', '.join(f'{k} 人 {v} 手' for k, v in sorted(res['sizes'].items()))}")
     print(f"推算對手範圍的勝率（1500 次模擬）一次約 {res['rangeMs']} 毫秒")
     print(f"Outs 練習出了 {sum(res['kinds'].values())} 題：{res['kinds']}")
     print(f"最後籌碼：{res['stacks']}")

@@ -105,7 +105,7 @@ function statsH(){
 
   const ps=POSO.map(p=>{const x=H.filter(y=>y.pos===p);return {p,n:x.length,v:x.reduce((a,y)=>a+y.net,0)}}),pm=Math.max(1,...ps.map(x=>Math.abs(x.v)));
   h+=`<div class="lbl" style="margin-top:20px">各位置的輸贏</div><p class="cap">依翻牌前的行動順序排列。往右是贏、往左是輸</p>`;
-  h+=ps.map(x=>`<div class="dv"><span class="hl">${x.p}<small>${POSZ[x.p]}</small></span><div class="dz">${x.v?`<i class="${x.v>0?'pos':'neg'}" style="width:${Math.abs(x.v)/pm*50}%"></i>`:''}</div><span class="hv">${sgn(x.v)}<small>${x.n} 手</small></span></div>`).join('');
+  h+=ps.filter(x=>x.n).map(x=>`<div class="dv"><span class="hl">${x.p}<small>${POSZ[x.p]}</small></span><div class="dz">${x.v?`<i class="${x.v>0?'pos':'neg'}" style="width:${Math.abs(x.v)/pm*50}%"></i>`:''}</div><span class="hv">${sgn(x.v)}<small>${x.n} 手</small></span></div>`).join('');
   const nb=ps.filter(x=>x.p!=='SB'&&x.p!=='BB'&&x.n>=3).sort((a,b)=>b.v-a.v);
   h+=`<p class="cap" style="margin-top:6px">盲注位輸錢很正常（每手都被迫先下注），重點是其他位置要贏。${nb.length?`你在 <b>${nb[0].p} ${POSZ[nb[0].p]}</b> 打得最好${nb.length>1&&nb[nb.length-1].v<0?`，在 <b>${nb[nb.length-1].p} ${POSZ[nb[nb.length-1].p]}</b> 輸最多，那個位置可以打緊一點`:''}。`:''}</p>`;
   return h;
